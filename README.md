@@ -106,4 +106,15 @@ KubeTree uses existing Kubernetes credentials and RBAC. It has no cluster mutati
 - [GitHub Issues](https://github.com/kubetre/kubetree/issues) — non-sensitive bug reports and feature requests.
 - [KubeTre website](https://kubetre.com) — product and company information.
 
-License selection and private security reporting arrangements are pending. Do not assume open-source redistribution rights until a license is published.
+License selection is pending. Do not assume open-source redistribution rights until a license is published.
+
+<!-- kubetre-contact-start -->
+## Contact & Support
+
+- General enquiries: [info@kubetre.com](mailto:info@kubetre.com)
+- Product support: [support@kubetre.com](mailto:support@kubetre.com)
+- Private vulnerability reports: [security@kubetre.com](mailto:security@kubetre.com)
+- Community support: [GitHub Issues](https://github.com/kubetre/kubetree/issues)
+
+Please do not include credentials or confidential cluster data in public issues.
+<!-- kubetre-contact-end -->
