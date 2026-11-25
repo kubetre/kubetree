@@ -1,5 +1,18 @@
-# KubeTree v0.1.0 — MVP preview
+# KubeTree
+
+[Website](https://kubetre.com) · [Releases](https://github.com/kubetre/kubetree/releases) · [Support](https://github.com/kubetre/kubetree/issues)
 Local, read-only Kubernetes ownership explorer by KubeTre.
+
+## Download and run
+Download the binary for your operating system and architecture from GitHub Releases once published. Install kubectl and configure your kubeconfig first. On Linux or macOS, make the downloaded binary executable (`chmod +x kubetree-linux-amd64`, replacing the filename as appropriate) and run it from a terminal. On Windows, run ` .\kubetree-windows-amd64.exe` in PowerShell. Open http://127.0.0.1:8080. Stop with Ctrl+C. Binaries are not signed; verify SHA256SUMS.txt before running. Platform runtime tests are pending.
+
+## Build from GitHub
+```sh
+git clone https://github.com/kubetre/kubetree.git
+cd kubetree
+make build
+make run
+```
 
 ## Linux setup
 Install Go 1.23+, Node.js 22 LTS with npm, GNU make, and kubectl compatible with your cluster. Configure kubeconfig and verify `kubectl config current-context` and `kubectl get pods -n default`. Internet access is required for the initial npm install.

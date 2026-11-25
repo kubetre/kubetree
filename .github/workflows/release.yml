@@ -1,0 +1,54 @@
+name: Build and release KubeTree
+on:
+  push:
+    branches: [main, development]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci --prefix frontend
+      - run: npm run build --prefix frontend
+      - run: go test ./...
+      - run: go vet ./...
+      - name: Build release binaries
+        run: |
+          mkdir -p release
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os=${target%/*}; arch=${target#*/}; ext=''
+            if [ "$os" = windows ]; then ext=.exe; fi
+            CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -o "release/kubetree-$os-$arch$ext" .
+          done
+          cd release && sha256sum kubetree-* > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kubetree-binaries
+          path: release/
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: kubetree-binaries
+          path: release
+      - run: gh release create "$GITHUB_REF_NAME" release/* --repo "$GITHUB_REPOSITORY" --generate-notes --draft
+        env:
+          GH_TOKEN: ${{ github.token }}
