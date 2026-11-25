@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -112,9 +114,13 @@ func inventory(ctx context.Context, cluster, ns string) (Inventory, error) {
 	}
 	return result, nil
 }
+
+//go:embed frontend/dist
+var frontendAssets embed.FS
+
 func main() {
 	addr := flag.String("listen", "127.0.0.1:8080", "loopback address")
-	dir := flag.String("ui", "frontend/dist", "built frontend directory")
+	dir := flag.String("ui", "", "optional external frontend directory override")
 	flag.Parse()
 	host, _, e := net.SplitHostPort(*addr)
 	if e != nil || net.ParseIP(host) == nil || !net.ParseIP(host).IsLoopback() {
@@ -192,7 +198,17 @@ func main() {
 		}
 		reply(w, map[string]string{"logs": string(b)}, nil)
 	})
-	mux.Handle("GET /", http.FileServer(http.Dir(*dir)))
+	var ui http.FileSystem
+	if *dir != "" {
+		ui = http.Dir(*dir)
+	} else {
+		assets, err := fs.Sub(frontendAssets, "frontend/dist")
+		if err != nil {
+			log.Fatal(err)
+		}
+		ui = http.FS(assets)
+	}
+	mux.Handle("GET /", http.FileServer(ui))
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Host != *addr {
 			http.Error(w, "invalid host", 403)

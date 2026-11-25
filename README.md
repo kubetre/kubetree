@@ -12,32 +12,21 @@ make build
 make run
 ```
 
-Open http://127.0.0.1:8080 (not localhost). Stop with Ctrl+C. If port 8080 is occupied, run `./bin/kubetree -listen 127.0.0.1:8081` and open that address. Run from the project root so the frontend assets are found.
+Open http://127.0.0.1:8080 (not localhost). Stop with Ctrl+C. If port 8080 is occupied, run `./bin/kubetree -listen 127.0.0.1:8081` and open that address. The built executable embeds the frontend and can run from any directory. kubectl and kubeconfig are still required.
 
 ## Test checklist
-Select a namespace containing workloads (type its name and Apply, or enter `*` for all namespaces). Compare the tree against `kubectl get deployments,replicasets,pods -n YOUR_NAMESPACE`. Expand a Deployment, then a ReplicaSet, select a Pod and check its labels and status. Test search and Refresh. Standalone Pods and resources whose owners are not loaded appear at the root. Partial permission failures appear as warnings. Namespace listing is optional; type a known namespace if it is forbidden. To switch clusters, use `kubectl config use-context NAME` outside the app and click Reconnect (Refresh if the context name is unchanged).
+Select a namespace containing workloads (choose its name and Apply, or choose All namespaces). Compare the tree against `kubectl get deployments,replicasets,pods -n YOUR_NAMESPACE`. Expand a Deployment, then a ReplicaSet, select a Pod and check its labels and status. Test search and Refresh. Standalone Pods and resources whose owners are not loaded appear at the root. Partial permission failures appear as warnings. Namespace discovery requires namespace listing permission; default remains available if discovery fails. To switch clusters, use `kubectl config use-context NAME` outside the app and click Reconnect (Refresh if the context name is unchanged).
 
 ## Architecture and safety
 Go HTTP backend calls kubectl with fixed read-only get commands and uses the existing kubeconfig and current context. React/Vite frontend builds to frontend/dist. Relationships use controller owner UID, not name matching. No agent, external telemetry or cluster mutation endpoints. Bind only to loopback; do not expose the server via a proxy or tunnel. Existing kubeconfig credentials and RBAC apply; prefer least-privilege list access to deployments, replicasets, pods and optionally namespaces. Resource status and labels can contain sensitive data; do not share screenshots or errors without reviewing them.
 
 ## Limitations and verification
-This is source code, not a self-contained executable. kubectl and built frontend files are required at runtime. Go compilation and namespace unit test passed in the authoring environment. npm registry DNS was unavailable, so frontend build and real cluster integration remain unverified. No npm lockfile yet; commit the generated package-lock.json after successful install. Events, networking relationships, live watches, YAML and cross-platform packaging are future work. License is not yet selected; choose one before public open-source release.
-
-## Publish after testing
-Create an empty repository named kubetree under your GitHub account. Review all files and choose a license. Then run:
-
-```sh
-git init -b main
-git add .
-git commit -m "Initial KubeTree MVP"
-git remote add origin https://github.com/kubetre/kubetree.git
-git push -u origin main
-```
+The frontend is embedded at build time. Run `make build` before distributing the executable; `make test` also builds the frontend first. Node.js and Go are build-time requirements only. kubectl and valid Kubernetes credentials remain runtime requirements. Cross-platform and live cluster testing of this change are pending. License is not yet selected.
 
 Do not commit kubeconfig, credentials, node_modules or build outputs.
 
 ## Internal release candidate
-The header links to kubetre.com in a new tab. Logs are available for Pods and their discovered Deployment/ReplicaSet ancestors. Select a container, tail length, timestamps or previous instance; auto-refresh polls every three seconds (not a streaming connection). Requires existing `get pods/log` permission. Output is capped at 2 MiB per request; logs stay local. Copy/download exports the filtered text. Existing kubectl dependency remains; standalone packaging and live cluster testing are still pending.
+The header links to kubetre.com in a new tab. Logs are available for Pods and their discovered Deployment/ReplicaSet ancestors. Select a container, tail length, timestamps or previous instance; auto-refresh polls every three seconds (not a streaming connection). Requires existing `get pods/log` permission. Output is capped at 2 MiB per request; logs stay local. Copy/download exports the filtered text. Existing kubectl dependency remains; native Kubernetes connectivity and live cluster testing are still pending.
 
 ## Dependency and Secret inspection (internal RC)
 Select a workload in List or Graph view, then click Dependency view. Click a related resource to inspect it; Focus selected resource navigates to its own dependencies. References may be missing or inaccessible. Service matches use selectors, not observed traffic. PDB and NetworkPolicy matchExpressions are not yet supported. Ingress and cert-manager references are forward-only; reverse discovery and EndpointSlice matching are pending.

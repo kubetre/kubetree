@@ -1,9 +1,10 @@
-.PHONY: build run test
-build:
-	cd frontend && npm install --no-audit --no-fund && npm run build
+.PHONY: build frontend run test
+frontend:
+	cd frontend && npm ci --no-audit --no-fund && npm run build
+build: frontend
 	mkdir -p bin
 	go build -o bin/kubetree .
 run:
 	./bin/kubetree
-test:
+test: frontend
 	go test ./...
