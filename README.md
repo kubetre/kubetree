@@ -31,7 +31,6 @@ Download the binary for your platform from [GitHub Releases](https://github.com/
 From the download directory:
 
 ```sh
-sha256sum --ignore-missing -c SHA256SUMS.txt
 chmod +x kubetree-linux-amd64
 ./kubetree-linux-amd64
 ```
