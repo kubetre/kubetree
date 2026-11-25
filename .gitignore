@@ -1,0 +1,22 @@
+frontend/node_modules/
+frontend/dist/
+/bin/
+.env
+
+# Logs
+*.log
+
+# Local environment and Kubernetes credentials
+.env.*
+!.env.example
+.kube/
+kubeconfig
+kubeconfig.yaml
+
+# IDE settings
+.idea/
+.vscode/
+
+# Operating system files
+.DS_Store
+Thumbs.db
