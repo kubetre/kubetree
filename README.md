@@ -1,22 +1,34 @@
-# KubeTree
+<p align="center"><img src="frontend/src/kubetre-logo.png" alt="KubeTre" width="200"></p>
+<h1 align="center">KubeTree</h1>
+<p align="center"><strong>Visualize your Kubernetes.</strong><br>Local-first Kubernetes resource visualization and troubleshooting.</p>
+<p align="center"><a href="https://github.com/kubetre/kubetree/releases"><strong>Download KubeTree</strong></a> · <a href="docs/user-guide.md">Documentation</a> · <a href="https://kubetre.com">Website</a> · <a href="https://github.com/kubetre/kubetree/issues">Support</a></p>
+<p align="center">v0.1.0 · Read-only · Local-first</p>
 
-**Visualize your Kubernetes.** A local-first Kubernetes resource explorer by KubeTre.
-
-[Website](https://kubetre.com) · [Downloads](https://github.com/kubetre/kubetree/releases) · [User guide](docs/user-guide.md) · [Issues](https://github.com/kubetre/kubetree/issues)
-
-## Features
-
-- Deployment, ReplicaSet and Pod ownership in list and graph views.
-- Namespace selection, resource search, status and label inspection.
-- Dependency discovery through configured references and selectors.
-- Container logs, filtering, copy and download, optional three-second polling.
-- On-demand Secret inspection, Base64 decoding, YAML and first-PEM TLS certificate details.
+![KubeTree graph view showing CoreDNS ownership hierarchy](docs/images/graph-view.png)
 
 ## Quick start
 
-Install kubectl and configure your kubeconfig. Verify access with `kubectl config current-context` and `kubectl get pods -n default`.
+You need `kubectl` on your PATH, a configured kubeconfig and access to a Kubernetes cluster. No Go or Node.js installation is required to run a downloaded binary.
 
-Download the appropriate executable and SHA256SUMS.txt from [Releases](https://github.com/kubetre/kubetree/releases) when published. On Linux AMD64:
+```sh
+kubectl config current-context
+kubectl get pods -n default
+```
+
+Download the binary for your platform from [GitHub Releases](https://github.com/kubetre/kubetree/releases). Release assets become available when the release is published.
+
+| Platform | Download |
+| --- | --- |
+| Linux x86-64 | [kubetree-linux-amd64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-linux-amd64) |
+| Linux ARM64 | [kubetree-linux-arm64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-linux-arm64) |
+| Windows x86-64 | [kubetree-windows-amd64.exe](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-windows-amd64.exe) |
+| macOS Intel | [kubetree-darwin-amd64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-darwin-amd64) |
+| macOS Apple Silicon | [kubetree-darwin-arm64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-darwin-arm64) |
+| Checksums | [SHA256SUMS.txt](https://github.com/kubetre/kubetree/releases/download/v0.1.0/SHA256SUMS.txt) |
+
+### Linux
+
+From the download directory:
 
 ```sh
 sha256sum --ignore-missing -c SHA256SUMS.txt
@@ -24,11 +36,58 @@ chmod +x kubetree-linux-amd64
 ./kubetree-linux-amd64
 ```
 
-Open http://127.0.0.1:8080. Stop with Ctrl+C. No Go or Node.js installation is required for downloaded binaries. kubectl remains required.
+For ARM64, substitute `kubetree-linux-arm64`.
+
+### Windows (PowerShell)
+
+```powershell
+.\kubetree-windows-amd64.exe
+```
+
+### macOS
+
+```sh
+chmod +x kubetree-darwin-arm64
+./kubetree-darwin-arm64
+```
+
+For Intel Macs, substitute `kubetree-darwin-amd64`.
+
+Open **[http://127.0.0.1:8080](http://127.0.0.1:8080)** in your browser. Select a namespace and click **Apply**. Stop the server with Ctrl+C.
+
+Linux x86-64 has been runtime-tested. Other binaries are built by CI but runtime testing is pending. Binaries are unsigned.
+
+## Explore KubeTree
+
+### Resource list and details
+
+Expand ownership hierarchies, search resources and inspect labels, status and YAML. The example shows resources in the `kube-system` namespace of a local Kind demo cluster.
+
+![Resource list and selected Pod details](docs/images/list-view.png)
+
+### Graph view
+
+Follow Deployment → ReplicaSet → Pod relationships visually. Use zoom and expand or collapse controls to navigate the hierarchy.
+
+### Dependency view
+
+Select a resource to explore configured references and selector matches. This example shows a Pod's ServiceAccount and Node relationships. These are not observed network traffic.
+
+![Dependency view showing Pod relationships](docs/images/dependency-view.png)
+
+### Container logs
+
+Select a Pod and container, filter logs, show timestamps, copy or download output, and optionally refresh every three seconds.
+
+<p align="center"><img src="docs/images/container-logs.png" alt="Container logs and filtering controls" width="760"></p>
+
+### Configuration, Secrets and certificates
+
+Inspect related configurations and authorized Secrets on demand, with masked values, Base64 decoding and first-PEM TLS certificate details. Never publish real Secret values or sensitive logs.
 
 ## Build from source
 
-On Linux, install Git, Go 1.23+, Node.js 22 with npm, GNU make and kubectl.
+On Linux, install Git, Go 1.23 or newer, Node.js 22 with npm, GNU make and kubectl.
 
 ```sh
 git clone https://github.com/kubetre/kubetree.git
@@ -38,10 +97,14 @@ make build
 make run
 ```
 
-## Security and limitations
+The executable is generated at `bin/kubetree`, with the frontend embedded. Open http://127.0.0.1:8080.
 
-KubeTree uses existing Kubernetes credentials and RBAC. It has no cluster mutation endpoints or cluster agent. Keep the server bound to loopback; local processes can access the API. Never share credentials, Secret values or sensitive logs. Dependencies are configured references, not traffic observations. Binaries are unsigned. Linux AMD64 runtime has been verified; other target runtimes remain unverified. See the user guide for details.
+## Security and support
 
-## Support and license
+KubeTree uses existing Kubernetes credentials and RBAC. It has no cluster mutation endpoints or in-cluster agent. Keep the server bound to loopback; local processes can access its API. Do not expose it to untrusted networks.
 
-Report non-sensitive bugs through [GitHub Issues](https://github.com/kubetre/kubetree/issues). Do not post security-sensitive data. License selection and private security reporting arrangements are pending; do not assume open-source redistribution rights until a license is published.
+- [User guide](docs/user-guide.md) — installation, usage and troubleshooting.
+- [GitHub Issues](https://github.com/kubetre/kubetree/issues) — non-sensitive bug reports and feature requests.
+- [KubeTre website](https://kubetre.com) — product and company information.
+
+License selection and private security reporting arrangements are pending. Do not assume open-source redistribution rights until a license is published.
