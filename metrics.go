@@ -75,7 +75,7 @@ func metricsRoutes(mux *http.ServeMux) {
 		)
 
 		if err != nil {
-			result.Message = "Metrics unavailable: check Metrics API and permissions."
+			result.Message = fmt.Sprintf("Metrics unavailable: %v", err)
 			reply(w, result, nil)
 			return
 		}

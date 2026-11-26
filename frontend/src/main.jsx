@@ -24,6 +24,7 @@ const [kindFilter,setKindFilter]=useState("All");
 const resourceKinds=[...new Set(items.map(x=>x.kind))].sort();
 
 const [lastRefresh,setLastRefresh]=useState(null);
+const [metricInterval,setMetricInterval]=useState(0);
 const [metricState,setMetricState]=useState({
   available:false,items:[],loading:false,message:""
 });
@@ -32,42 +33,65 @@ useEffect(()=>{
   if(!context||!lastRefresh||busy)return;
 
   let active=true;
+  let timer;
   const controller=new AbortController();
 
-  setMetricState({
-    context,namespace:ns,refresh:lastRefresh,
-    available:false,items:[],loading:true,message:""
-  });
+  async function readMetrics(){
+    try {
+      const response=await fetch(
+        "/api/metrics?"+new URLSearchParams({
+          context,namespace:ns,scope:"pods"
+        }),{
+          signal:controller.signal,
+          headers:{"X-KubeTree-Local":"1"}
+        }
+      );
 
-  fetch("/api/metrics?"+new URLSearchParams({
-    context,namespace:ns,scope:"pods"
-  }),{
-    signal:controller.signal,
-    headers:{"X-KubeTree-Local":"1"}
-  })
-  .then(r=>{
-    if(!r.ok)throw Error("Metrics request failed");
-    return r.json();
-  })
-  .then(data=>{
-    if(active)setMetricState({
-      ...data,context,namespace:ns,
-      refresh:lastRefresh,loading:false
-    });
-  })
-  .catch(()=>{
-    if(active)setMetricState({
-      context,namespace:ns,refresh:lastRefresh,
-      available:false,items:[],loading:false,
-      message:"Metrics request failed"
-    });
-  });
+      if(!response.ok)throw Error("Metrics request failed");
+
+      const data=await response.json();
+
+      if(!active)return;
+
+      setMetricState({
+        ...data,context,namespace:ns,
+        refresh:lastRefresh,
+        loading:false,
+        updatedAt:new Date()
+      });
+
+      if(data.available&&metricInterval>0){
+        timer=setTimeout(readMetrics,metricInterval*1000);
+      }
+
+    } catch(e) {
+      if(active)setMetricState({
+        context,namespace:ns,refresh:lastRefresh,
+        available:false,items:[],loading:false,
+        message:"Metrics request failed"
+      });
+    }
+  }
+
+  setMetricState(old=>
+    old.context===context &&
+    old.namespace===ns &&
+    old.refresh===lastRefresh
+      ? old
+      : {
+          context,namespace:ns,refresh:lastRefresh,
+          available:false,items:[],loading:true,message:""
+        }
+  );
+
+  readMetrics();
 
   return()=>{
     active=false;
+    clearTimeout(timer);
     controller.abort();
   };
-},[context,ns,lastRefresh,busy]);
+},[context,ns,lastRefresh,busy,metricInterval]);
 
 const currentMetrics=
   !busy &&
@@ -173,7 +197,24 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
 </div><section className="toolbar"><label className="namespace-control">Namespace <select value={draft} disabled={busy} onChange={e=>T(e.target.value)}>
 <option value="*">All namespaces</option>
 {[...new Set(['default', ...(draft==='*'?[]:[draft]), ...names])].map(n=><option key={n} value={n}>{n}</option>)}
-</select></label><div className="toolbar-actions"><button disabled={busy} onClick={()=>N(draft.trim()||'default')}>Apply</button><button disabled={busy||!context} onClick={load}>Refresh</button><button disabled={busy} onClick={connect}>Reconnect</button></div></section><div className="search-row">
+</select></label><div className="toolbar-actions"><button disabled={busy} onClick={()=>N(draft.trim()||'default')}>Apply</button><button disabled={busy||!context} onClick={load}>Refresh</button><button disabled={busy} onClick={connect}>Reconnect</button></div>
+<label className="metrics-refresh-control">
+  Metrics refresh
+  <select
+    aria-label="Metrics auto-refresh interval"
+    value={metricInterval}
+    onChange={e=>setMetricInterval(Number(e.target.value))}
+    disabled={busy||!context}
+  >
+    <option value={0}>Off</option>
+    <option value={5}>5 seconds</option>
+    <option value={10}>10 seconds</option>
+    <option value={15}>15 seconds</option>
+    <option value={30}>30 seconds</option>
+    <option value={60}>60 seconds</option>
+  </select>
+</label>
+</section><div className="search-row">
 <div className="search-box">
 <span className="search-icon" aria-hidden="true">⌕</span>
 <input className="search" aria-label="Search resources" placeholder="Search resources…" value={search} onChange={e=>Q(e.target.value)}/>
@@ -186,6 +227,15 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
     <option key={k} value={k}>{k}</option>
   )}
 </select>
+<span className="metrics-refresh-status" role="status">
+  {currentMetrics.loading
+    ? "Loading metrics…"
+    : currentMetrics.available
+      ? "Metrics updated: "+currentMetrics.updatedAt?.toLocaleTimeString()
+      : metricInterval>0
+        ? "Metrics auto-refresh stopped"
+        : "Metrics unavailable"}
+</span>
 <span className="refresh-status" role="status">
 {busy?"Refreshing…":lastRefresh?"Last refreshed: "+lastRefresh.toLocaleTimeString():"Not refreshed yet"}
 </span>
