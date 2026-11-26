@@ -2,7 +2,7 @@
 <h1 align="center">KubeTree</h1>
 <p align="center"><strong>Visualize your Kubernetes.</strong><br>Local-first Kubernetes resource visualization and troubleshooting.</p>
 <p align="center"><a href="https://github.com/kubetre/kubetree/releases"><strong>Download KubeTree</strong></a> · <a href="docs/user-guide.md">Documentation</a> · <a href="https://kubetre.com">Website</a> · <a href="https://github.com/kubetre/kubetree/issues">Support</a></p>
-<p align="center">v0.1.0 · Read-only · Local-first</p>
+<p align="center">v0.1.1 · Read-only · Local-first</p>
 
 ![KubeTree graph view showing CoreDNS ownership hierarchy](docs/images/graph-view.png)
 
@@ -19,12 +19,12 @@ Download the binary for your platform from [GitHub Releases](https://github.com/
 
 | Platform | Download |
 | --- | --- |
-| Linux x86-64 | [kubetree-linux-amd64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-linux-amd64) |
-| Linux ARM64 | [kubetree-linux-arm64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-linux-arm64) |
-| Windows x86-64 | [kubetree-windows-amd64.exe](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-windows-amd64.exe) |
-| macOS Intel | [kubetree-darwin-amd64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-darwin-amd64) |
-| macOS Apple Silicon | [kubetree-darwin-arm64](https://github.com/kubetre/kubetree/releases/download/v0.1.0/kubetree-darwin-arm64) |
-| Checksums | [SHA256SUMS.txt](https://github.com/kubetre/kubetree/releases/download/v0.1.0/SHA256SUMS.txt) |
+| Linux x86-64 | [kubetree-linux-amd64](https://github.com/kubetre/kubetree/releases/latest/download/kubetree-linux-amd64) |
+| Linux ARM64 | [kubetree-linux-arm64](https://github.com/kubetre/kubetree/releases/latest/download/kubetree-linux-arm64) |
+| Windows x86-64 | [kubetree-windows-amd64.exe](https://github.com/kubetre/kubetree/releases/latest/download/kubetree-windows-amd64.exe) |
+| macOS Intel | [kubetree-darwin-amd64](https://github.com/kubetre/kubetree/releases/latest/download/kubetree-darwin-amd64) |
+| macOS Apple Silicon | [kubetree-darwin-arm64](https://github.com/kubetre/kubetree/releases/latest/download/kubetree-darwin-arm64) |
+| Checksums | [SHA256SUMS.txt](https://github.com/kubetre/kubetree/releases/latest/download/SHA256SUMS.txt) |
 
 ### Linux
 
