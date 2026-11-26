@@ -502,3 +502,562 @@ html[data-theme="dark"] .brand img {
     mix-blend-mode: lighten;
     border-radius: 0;
 }
+
+/* Global resource search */
+
+.global-search {
+  background: var(--c201630);
+  border: 1px solid var(--c49365e);
+  border-radius: 10px;
+  padding: 16px;
+  min-width: 0;
+}
+
+.global-search-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-search-input {
+  flex: 1;
+  min-width: 220px;
+  padding: 10px 12px;
+  color: var(--ceee);
+  background: var(--c30223f);
+  border: 1px solid var(--c62467b);
+  border-radius: 6px;
+}
+
+.global-search-summary {
+  color: var(--cbbaacb);
+  font-size: 12px;
+  margin: 12px 0;
+}
+
+.global-search-table-wrap {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.global-search-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13px;
+}
+
+.global-search-table th,
+.global-search-table td {
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--c49365e);
+  overflow-wrap: anywhere;
+}
+
+.global-search-table th {
+  color: var(--cd9a6ff);
+}
+
+.global-search-table tr:hover,
+.global-search-table tr.search-selected {
+  background: var(--c30223f);
+}
+
+.global-search details {
+  margin: 12px 0;
+  color: var(--cbbaacb);
+}
+
+@media (max-width: 700px) {
+  .global-search-input {
+    flex-basis: 100%;
+  }
+
+  .global-search-table {
+    min-width: 650px;
+  }
+}
+
+.search-inspector {
+  border: 1px solid var(--c49365e);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+  min-width: 0;
+  overflow: auto;
+}
+
+.search-inspector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.search-inspector pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.connection-source{flex:1;min-width:280px;display:flex;gap:8px;align-items:center}.connection-source input{flex:1;min-width:0}.local-browser{border:1px solid var(--c49365e);padding:16px;border-radius:8px;margin:12px 0;background:var(--c201630)}.local-browser-list{display:flex;flex-direction:column;gap:4px;max-height:320px;overflow:auto}.local-browser-list button{text-align:left;overflow-wrap:anywhere}.local-browser form input{flex:1;min-width:160px}
+
+
+/* Connection layout v2 */
+
+.connection-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    background: var(--c201630);
+    border: 1px solid var(--c49365e);
+    border-radius: 10px;
+}
+
+.connection-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.connection-toolbar label:first-child {
+    flex: 1 1 100%;
+}
+
+.connection-toolbar label:first-child input {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 760px;
+}
+
+.connection-toolbar input,
+.connection-toolbar select,
+.connection-toolbar button {
+    min-height: 38px;
+    box-sizing: border-box;
+}
+
+.connection-toolbar select {
+    min-width: 200px;
+    max-width: 100%;
+}
+
+.active-scope {
+    padding: 12px 16px;
+    margin: 16px 0;
+    gap: 16px;
+    border-radius: 8px;
+}
+
+.toolbar:not(.connection-toolbar) {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px 16px;
+    margin: 16px 0;
+    padding: 4px 0;
+}
+
+.namespace-control {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.namespace-control select {
+    min-width: 210px;
+    min-height: 38px;
+}
+
+.toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.metrics-refresh-control {
+    margin-left: auto;
+}
+
+.cluster-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 16px;
+    padding-bottom: 12px;
+    margin-top: 18px;
+    margin-bottom: 12px;
+    border-top: 1px solid var(--c49365e);
+    border-bottom: 1px solid var(--c49365e);
+}
+
+.cluster-navigation button {
+    padding: 10px 18px;
+}
+
+.search-row {
+    gap: 12px;
+    margin-top: 16px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+}
+
+.view-controls {
+    gap: 8px;
+}
+
+.panels {
+    gap: 16px;
+}
+
+@media (max-width: 800px) {
+    .connection-toolbar {
+        padding: 14px;
+        gap: 12px;
+    }
+
+    .connection-toolbar label:first-child {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .connection-toolbar select,
+    .namespace-control select {
+        min-width: 0;
+    }
+
+    .metrics-refresh-control {
+        margin-left: 0;
+    }
+
+    .cluster-navigation button {
+        padding: 9px 12px;
+    }
+}
+
+/* Compact connection toolbar */
+
+.connection-toolbar {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.connection-toolbar label:first-child {
+    flex: 1 1 300px;
+    flex-direction: row;
+    align-items: center;
+}
+
+.connection-toolbar label:first-child input {
+    max-width: none;
+}
+
+.scope-toolbar,
+.context-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px 16px;
+}
+
+.scope-toolbar label,
+.context-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.scope-toolbar select,
+.context-toolbar select {
+    min-height: 38px;
+    min-width: 180px;
+}
+
+.scope-toolbar .metrics-refresh-control select {
+    min-width: 100px;
+}
+
+@media (max-width: 700px) {
+    .connection-toolbar label:first-child {
+        flex-basis: 100%;
+    }
+
+    .scope-toolbar select,
+    .context-toolbar select {
+        min-width: 0;
+    }
+}
+
+/* Compact input fields */
+
+.connection-toolbar {
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+.connection-toolbar .connection-source {
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.connection-toolbar .connection-source input {
+    flex: 0 1 420px;
+    width: 420px;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.connection-toolbar > button {
+    flex: 0 0 auto;
+}
+
+.search-row {
+    justify-content: flex-start;
+    gap: 12px;
+}
+
+.search-row .search-box {
+    flex: 0 1 280px;
+    width: 280px;
+    max-width: 100%;
+    min-width: 0;
+}
+
+.search-row .search-box .search {
+    width: 100%;
+    min-width: 0;
+}
+
+.search-row .kind-filter {
+    flex: 0 0 auto;
+    width: auto;
+    max-width: 100%;
+}
+
+.metrics-refresh-status {
+    margin-left: auto;
+}
+
+@media (max-width: 700px) {
+    .connection-toolbar .connection-source input {
+        width: 100%;
+        flex: 1;
+    }
+
+    .metrics-refresh-status {
+        margin-left: 0;
+    }
+}
+
+
+/* Unified connection overview */
+
+.connection-overview {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px 24px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    background: var(--c201630);
+    border: 1px solid var(--c49365e);
+    border-radius: 8px;
+}
+
+.connection-overview .active-scope {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+}
+
+.connection-overview .connection-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    padding: 0;
+    margin: 0;
+    gap: 10px;
+    border: 0;
+    background: transparent;
+}
+
+.connection-overview .connection-source input {
+    width: 320px;
+    flex: 0 1 320px;
+    min-width: 0;
+    max-width: 100%;
+}
+
+
+/* Compact active connection bar */
+
+.connection-overview {
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
+    padding: 10px 16px;
+}
+
+.connection-overview .active-scope {
+    flex: 0 1 auto;
+    width: auto;
+    align-items: center;
+    margin: 0;
+}
+
+.connection-overview .connection-toolbar {
+    flex: 0 0 auto;
+    width: auto;
+    padding: 0;
+    margin: 0;
+}
+
+.connection-overview .connection-toolbar button {
+    min-height: 32px;
+    padding: 6px 14px;
+}
+
+
+/* Simplified config browser */
+
+.scope-toolbar > button:first-child {
+    flex: 0 0 auto;
+    margin-right: 8px;
+}
+
+.local-browser {
+    max-width: 760px;
+    margin: 12px 0;
+    padding: 14px;
+}
+
+.local-browser .browser-location {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.browser-location span {
+    overflow-wrap: anywhere;
+    font-size: 13px;
+}
+
+.local-browser-list {
+    max-height: 280px;
+    overflow-y: auto;
+}
+
+
+/* Clean connection status and toolbar spacing */
+
+.connection-overview {
+    background: transparent;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 4px 0;
+    margin: 0 0 20px;
+}
+
+.connection-overview .active-scope {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    gap: 24px;
+}
+
+.toolbar.scope-toolbar {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    column-gap: 24px;
+    row-gap: 14px;
+    margin: 0 0 20px;
+    padding: 0;
+}
+
+.scope-toolbar > button:first-child {
+    margin-right: 0;
+}
+
+.scope-toolbar label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.scope-toolbar .toolbar-actions {
+    display: flex;
+    gap: 14px;
+}
+
+.scope-toolbar .metrics-refresh-control {
+    margin-left: auto;
+}
+
+@media (max-width: 800px) {
+    .toolbar.scope-toolbar {
+        column-gap: 16px;
+        row-gap: 12px;
+    }
+
+    .scope-toolbar .metrics-refresh-control {
+        margin-left: 0;
+    }
+}
+
+
+/* Kubeconfig folder icon */
+
+.scope-toolbar .config-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 38px;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.config-trigger[aria-expanded="true"] {
+    background: var(--c50316d);
+}
+
+
+/* Kubeconfig folder icon */
+
+.scope-toolbar .config-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 38px;
+    padding: 0;
+    flex: 0 0 auto;
+}
+
+.config-trigger[aria-expanded="true"] {
+    background: var(--c50316d);
+}
+
+
+/* Main navigation spacing */
+
+.view-controls.cluster-navigation {
+    gap: 20px;
+    align-items: center;
+}
+

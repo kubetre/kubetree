@@ -53,7 +53,7 @@ function NodeUsage({label, usage, capacity, allocatable, format}) {
   </div>;
 }
 
-export function NodesPanel({context, interval, refresh}) {
+export function NodesPanel({contextName,context, interval, refresh}) {
   const [inventory, setInventory] = useState({
     loading: true, items: []
   });
@@ -170,7 +170,7 @@ export function NodesPanel({context, interval, refresh}) {
     </div>
 
     <p className="hint">
-      Cluster-wide · {context}
+      Cluster-wide · {contextName}
     </p>
 
     <div className="metric-grid">
