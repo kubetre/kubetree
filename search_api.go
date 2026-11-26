@@ -53,7 +53,7 @@ func globalSearch(
 		return result, err
 	}
 
-	client, host, err := newSearchClient(cluster)
+	client, host, err := newSearchClient(ctx, cluster)
 	if err != nil {
 		return result, err
 	}

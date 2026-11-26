@@ -36,12 +36,16 @@ type searchMetadataList struct {
 	} `json:"items"`
 }
 
-func newSearchClient(cluster string) (*http.Client, string, error) {
+func newSearchClient(ctx context.Context, cluster string) (*http.Client, string, error) {
 	if cluster == "" {
 		return nil, "", fmt.Errorf("context required")
 	}
 
-	rules := clientcmd.NewDefaultClientConfigLoadingRules()
+	c, ok := ctx.Value(connectionKey{}).(connection)
+	if !ok {
+		return nil, "", fmt.Errorf("connection required")
+	}
+	rules := connectionRules(c.paths)
 	overrides := &clientcmd.ConfigOverrides{
 		CurrentContext: cluster,
 	}

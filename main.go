@@ -54,7 +54,7 @@ type Inventory struct {
 func kube(ctx context.Context, args ...string) ([]byte, error) {
 	ctx, cancel := context.WithTimeout(ctx, 25*time.Second)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "kubectl", args...)
+	cmd := kubeCommand(ctx, args...)
 	out, err := cmd.Output()
 	if err != nil {
 		if e, ok := err.(*exec.ExitError); ok {
@@ -132,6 +132,7 @@ func main() {
 		log.Fatal("listen must be a loopback IP and port")
 	}
 	mux := http.NewServeMux()
+	connectionRoutes(mux)
 	dependencyRoutes(mux)
 	searchRoutes(mux)
 	metricsRoutes(mux)
@@ -182,7 +183,7 @@ func main() {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 25*time.Second)
 		defer cancel()
-		cmd := exec.CommandContext(ctx, "kubectl", args...)
+		cmd := kubeCommand(ctx, args...)
 		pipe, err := cmd.StdoutPipe()
 		if err != nil {
 			reply(w, nil, err)
@@ -227,6 +228,13 @@ func main() {
 		}
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'")
+		if strings.HasPrefix(r.URL.Path, "/api/") && r.URL.Path != "/api/connections" && r.URL.Path != "/api/local-files" {
+			var ok bool
+			r, ok = bindConnection(w, r)
+			if !ok {
+				return
+			}
+		}
 		mux.ServeHTTP(w, r)
 	})
 	log.Printf("Open http://%s", *addr)

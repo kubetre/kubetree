@@ -1,3 +1,4 @@
+import {SearchPanel} from "./search.jsx";
 import {NodesPanel} from "./nodes.jsx";
 import {MetricsPanel,MetricSummary} from "./metrics.jsx";
 import {metricKinds} from "./metrics.js";
@@ -20,8 +21,32 @@ function HealthStatus({resource}) {
   </span>
 }
 
-function App(){const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('kubetree-theme')==='light'?'light':'dark'}catch{return 'dark'}});useEffect(()=>{document.documentElement.dataset.theme=theme;try{localStorage.setItem('kubetree-theme',theme)}catch{}},[theme]);const [context,C]=useState(''),[ns,N]=useState(()=>{try{return localStorage.getItem('kubetree-namespace')||'default'}catch{return 'default'}}),[draft,T]=useState(ns),[names,S]=useState([]),[items,I]=useState([]),[warnings,W]=useState([]),[error,E]=useState(''),[busy,B]=useState(false),[selected,D]=useState(null),[search,Q]=useState(''),[collapsed,F]=useState({}),[view,V]=useState("list"),[zoom,Z]=useState(1),[tab,Tab]=useState("Details"),[anchor,A]=useState(null);const [expanded,expand]=useState(false),[fit,setFit]=useState(true),[fitMode,setFitMode]=useState("width");const scrollRef=useRef(null),canvasRef=useRef(null);
+function App(){const [browser,setBrowser]=useState(null),[browseMode,setBrowseMode]=useState("file"),[browseBusy,setBrowseBusy]=useState(false),[browseError,setBrowseError]=useState(""),[sourceLabel,setSourceLabel]=useState("");const [source,setSource]=useState(""),[contexts,setContexts]=useState([]),[choice,setChoice]=useState(""),[contextName,setContextName]=useState(""),[activeSource,setActiveSource]=useState(""),[connecting,setConnecting]=useState(false);const [theme,setTheme]=useState(()=>{try{return localStorage.getItem('kubetree-theme')==='light'?'light':'dark'}catch{return 'dark'}});useEffect(()=>{document.documentElement.dataset.theme=theme;try{localStorage.setItem('kubetree-theme',theme)}catch{}},[theme]);const [context,C]=useState(''),[ns,N]=useState(()=>{try{return localStorage.getItem('kubetree-namespace')||'default'}catch{return 'default'}}),[draft,T]=useState(ns),[names,S]=useState([]),[items,I]=useState([]),[warnings,W]=useState([]),[error,E]=useState(''),[busy,B]=useState(false),[selected,D]=useState(null),[search,Q]=useState(''),[collapsed,F]=useState({}),[view,V]=useState("list"),[zoom,Z]=useState(1),[tab,Tab]=useState("Details"),[anchor,A]=useState(null);const [expanded,expand]=useState(false),[fit,setFit]=useState(true),[fitMode,setFitMode]=useState("width");const scrollRef=useRef(null),canvasRef=useRef(null);
 const dragRef=useRef(null);
+
+useEffect(()=>{
+  if(!browser||browseBusy)return;
+
+  function outside(e){
+    if(!e.target.closest(".local-browser,.config-trigger")){
+      setBrowser(null);
+    }
+  }
+
+  function escape(e){
+    if(e.key==="Escape")setBrowser(null);
+  }
+
+  document.addEventListener("pointerdown",outside);
+  document.addEventListener("keydown",escape);
+
+  return()=>{
+    document.removeEventListener("pointerdown",outside);
+    document.removeEventListener("keydown",escape);
+  };
+},[!!browser,browseBusy]);
+
+
 const [kindFilter,setKindFilter]=useState("All");
 const resourceKinds=[...new Set(items.map(x=>x.kind))].sort();
 
@@ -31,12 +56,14 @@ const [clusterView,setClusterView]=useState("workloads");
 const [nodeRefresh,setNodeRefresh]=useState(0);
 const [connectionVersion,setConnectionVersion]=useState(0);
 const inventoryRequest=useRef(null);
+const [prepared,setPrepared]=useState(null),[namespaceWarning,setNamespaceWarning]=useState("");
+const [searchRefresh,setSearchRefresh]=useState(0);
 const [metricState,setMetricState]=useState({
   available:false,items:[],loading:false,message:""
 });
 
 useEffect(()=>{
-  if(!context||!lastRefresh||busy||clusterView==="nodes")return;
+  if(!context||!lastRefresh||busy||clusterView!=="workloads")return;
 
   let active=true;
   let timer;
@@ -190,8 +217,52 @@ requestAnimationFrame(()=>{
   el.scrollLeft=Math.max(0,(el.scrollWidth-el.clientWidth)/2);
   el.scrollTop=0;
 })};resize();const observer=new ResizeObserver(resize);observer.observe(el);for(const child of canvas.children)observer.observe(child);return()=>observer.disconnect()},[view,fit,fitMode,busy,items,search,kindFilter,collapsed,expanded,clusterView]);function select(x){D(x);Tab('Details');if(view!=='dep')A(x)}
-async function connect(){E('');try{const c=(await api('context')).context;C(c);setConnectionVersion(v=>v+1);try{S(await api('namespaces',{context:c}))}catch(e){S([]);E('Namespace discovery failed: '+e.message);console.error(e)}}catch(e){E(e.message)}}
-useEffect(()=>{connect()},[]);useEffect(()=>{
+async function browse(path="",mode=browseMode){setBrowseMode(mode);setBrowseBusy(true);setBrowseError("");setBrowser({path,entries:[]});try{setBrowser(await api("local-files",{path}))}catch(e){setBrowseError(e.message)}finally{setBrowseBusy(false)}}
+async function chooseSource(path){setBrowser(null);await discover(path,true)}
+function activate(data,sourceValue,namespace){
+  inventoryRequest.current?.abort();
+  I([]);D(null);A(null);W([]);B(false);setLastRefresh(null);expand(false);
+  Q("");setKindFilter("All");F({});Tab("Details");
+  setContextName(data.name);setActiveSource(sourceValue);
+  N(namespace);T(namespace);C(data.context);setConnectionVersion(v=>v+1);
+}
+async function prepare(name,sourceValue,auto=false){
+  setChoice(name);setPrepared(null);S([]);T("");setNamespaceWarning("");
+  if(!name)return;
+  const r=await fetch('/api/connections?'+new URLSearchParams({source:sourceValue,name}),{method:'POST',headers:{'X-KubeTree-Local':'1'}});
+  const data=await r.json();if(!r.ok)throw Error(data.error||'Connection failed');
+  const namespace=data.namespace||'default';
+  T(namespace);
+  try{S(await api('namespaces',{context:data.context}))}catch(e){setNamespaceWarning('Namespace discovery failed; enter namespace manually: '+e.message)}
+  setPrepared({data,source:sourceValue,name});
+  if(auto)activate(data,sourceValue,namespace);
+}
+async function discover(sourceValue=source,auto=false){
+  setConnecting(true);E('');setPrepared(null);setContexts([]);setChoice('');S([]);T('');setNamespaceWarning('');
+  try{
+    const data=await api('connections',{source:sourceValue});
+    setSource(sourceValue);setSourceLabel(sourceValue||data.exported||"");setContexts(data.contexts);
+    const name=data.current||data.contexts[0]||'';
+    await prepare(name,sourceValue,auto&&!!name);
+  }catch(e){E(e.message)}finally{setConnecting(false)}
+}
+async function chooseContext(name){
+  setConnecting(true);E('');
+  try{await prepare(name,source)}catch(e){E(e.message)}finally{setConnecting(false)}
+}
+async function applyConnection(){
+  if(!prepared||connecting||prepared.name!==choice||prepared.source!==source)return;
+  const namespace=draft.trim();
+  if(namespace!=="*"&&(!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(namespace)||namespace.length>63)){E('Enter a valid namespace name.');return;}
+  setConnecting(true);E('');
+  try{
+    // Re-resolve the selected configuration when Apply is pressed.
+    const r=await fetch('/api/connections?'+new URLSearchParams({source,name:choice}),{method:'POST',headers:{'X-KubeTree-Local':'1'}});
+    const data=await r.json();if(!r.ok)throw Error(data.error||'Connection failed');
+    setPrepared({data,source,name:choice});activate(data,source,namespace);
+  }catch(e){E(e.message)}finally{setConnecting(false)}
+}
+useEffect(()=>{discover("",true)},[]);useEffect(()=>{
   if(context)load();
   return()=>inventoryRequest.current?.abort();
 },[context,ns,connectionVersion]);useEffect(()=>{try{localStorage.setItem("kubetree-namespace",ns)}catch{}},[ns]);
@@ -230,8 +301,67 @@ async function load(){
   }
 }
 
+
+function openSearchResource(item, mode="list"){
+  const resource=items.find(x=>
+    x.metadata.uid===item.uid &&
+    x.kind===item.kind &&
+    x.metadata.name===item.name &&
+    x.metadata.namespace===item.namespace
+  );
+
+  if(!resource)return false;
+
+  Q("");
+  setKindFilter("All");
+  F({});
+  expand(false);
+  V(mode);
+  D(resource);
+  A(resource);
+  Tab("Details");
+  setClusterView("workloads");
+
+  return true;
+}
+
+
+function clearSelection(){
+  D(null);
+  A(null);
+  Tab("Details");
+}
+
+function resetResourceView(mode){
+  clearSelection();
+  Q("");
+  setKindFilter("All");
+  F({});
+  expand(false);
+
+  if(mode==="graph")setFit(true);
+
+  V(mode);
+}
+
+useEffect(()=>{
+  function handleEscape(e){
+    if(e.key==="Escape" && !expanded &&
+       clusterView==="workloads"){
+      clearSelection();
+    }
+  }
+
+  window.addEventListener("keydown",handleEscape);
+  return()=>window.removeEventListener(
+    "keydown",handleEscape
+  );
+},[expanded,clusterView]);
+
 function refreshCurrentView(){
-  if(clusterView==="nodes"){
+  if(clusterView==="search"){
+    setSearchRefresh(v=>v+1);
+  }else if(clusterView==="nodes"){
     setNodeRefresh(v=>v+1);
   }else{
     load();
@@ -250,20 +380,59 @@ function node(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!matche
 function graph(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!matches(x))return null;const next=new Set(seen).add(id),kids=(children.get(id)||[]).filter(y=>matches(y)&&!next.has(y.metadata.uid));return <li key={id}><div className={'graph-card '+(selected?.metadata.uid===id?'selected':'')}><button className="graph-resource" onClick={()=>select(x)}><span className="kind">{x.kind}</span><strong>{x.metadata.name}</strong><small>{x.metadata.namespace} · <HealthStatus resource={x}/></small>
 <MetricSummary resource={x} children={children} metrics={podMetrics}/>
 </button>{kids.length>0&&<button className="graph-toggle" aria-label={collapsed[id]?'Expand children':'Collapse children'} aria-expanded={!collapsed[id]} onClick={()=>F(old=>({...old,[id]:!old[id]}))}>{collapsed[id]?'＋':'−'} {kids.length}</button>}</div>{!collapsed[id]&&kids.length>0&&<ul>{kids.map(y=>graph(y,next))}</ul>}</li>}
-return <><header><a className="brand" href="https://kubetre.com" target="_blank" rel="noopener noreferrer"><img src={theme === 'light' ? brandLogoLight : brandLogoDark} alt="KubeTre"/><span className="product-name">KubeTree</span></a><div className="header-actions"><span className="pill">READ ONLY · LOCAL</span><button type="button" className="theme-toggle" aria-label={theme==='light'?'Switch to dark theme':'Switch to light theme'} onClick={()=>setTheme(t=>t==='light'?'dark':'light')}>{theme==='light'?'☾ Dark':'☀ Light'}</button></div></header><main><div className="active-scope">
-  <div className="scope-item">
-    <span>Active context</span>
-    <strong>{context||"Not connected"}</strong>
-  </div>
-  <div className="scope-item">
-    <span>Active namespace</span>
-    <strong>{clusterView==="nodes"?"Cluster-wide":ns==="*"?"All namespaces":ns}</strong>
-  </div>
-  {clusterView==="workloads"&&draft!==ns&&<span className="scope-pending">Namespace change not applied</span>}
-</div><section className="toolbar"><label className="namespace-control">Namespace <select value={draft} disabled={busy||clusterView==="nodes"} onChange={e=>T(e.target.value)}>
-<option value="*">All namespaces</option>
-{[...new Set(['default', ...(draft==='*'?[]:[draft]), ...names])].map(n=><option key={n} value={n}>{n}</option>)}
-</select></label><div className="toolbar-actions"><button disabled={busy||clusterView==="nodes"} onClick={()=>N(draft.trim()||'default')}>Apply</button><button disabled={busy||!context} onClick={refreshCurrentView}>Refresh</button><button disabled={busy} onClick={connect}>Reconnect</button></div>
+return <><header><a className="brand" href="https://kubetre.com" target="_blank" rel="noopener noreferrer"><img src={theme === 'light' ? brandLogoLight : brandLogoDark} alt="KubeTre"/><span className="product-name">KubeTree</span></a><div className="header-actions"><span className="pill">READ ONLY · LOCAL</span><button type="button" className="theme-toggle" aria-label={theme==='light'?'Switch to dark theme':'Switch to light theme'} onClick={()=>setTheme(t=>t==='light'?'dark':'light')}>{theme==='light'?'☾ Dark':'☀ Light'}</button></div></header><main><div className="connection-overview">{context&&<div className="active-scope">
+<div className="scope-item"><span>Active context</span><strong>{contextName}</strong></div>
+<div className="scope-item"><span>Active namespace</span><strong>{ns==="*"?"All namespaces":ns}</strong></div>
+{(source!==activeSource||choice!==contextName||draft!==ns)&&<span className="scope-pending">Connection changes not applied</span>}
+</div>}</div>{error&&<p role="alert" className="error">{error}</p>}<section className="toolbar scope-toolbar">
+<button
+  disabled={connecting||browseBusy}
+  
+className="config-trigger"
+title="Open kubeconfig"
+aria-label="Open kubeconfig"
+aria-expanded={!!browser}
+  onClick={()=>browser?setBrowser(null):browse("","file")}
+>
+<svg width="20" height="20" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor" strokeWidth="1.6"
+     strokeLinecap="round" strokeLinejoin="round"
+     aria-hidden="true">
+  <path d="M3 17V5a2 2 0 0 1 2-2h4l3 3h7a2 2 0 0 1 2 2v2"/>
+  <path d="M3 17l3-7h16l-3 9H5a2 2 0 0 1-2-2Z"/>
+</svg>
+</button>
+
+<label>Context <select disabled={connecting||!contexts.length} value={choice} onChange={e=>chooseContext(e.target.value)}><option value="">Select context</option>{contexts.map(c=><option key={c}>{c}</option>)}</select></label>
+<label className="namespace-control">
+  Namespace
+  <select
+    value={draft}
+    disabled={connecting||!prepared}
+    onChange={e=>{
+      if(e.target.value==="__manual__"){
+        const value=window.prompt(
+          "Enter namespace name",draft==="*"?"":draft
+        );
+        if(value&&value.trim())T(value.trim());
+      }else{
+        T(e.target.value);
+      }
+    }}
+  >
+    <option value="" disabled>Select namespace</option>
+    <option value="*">All namespaces</option>
+    {[...new Set([
+      "default",
+      ...names,
+      ...(draft&&draft!=="*"?[draft]:[])
+    ])].sort().map(n=>
+      <option key={n} value={n}>{n}</option>
+    )}
+    <option value="__manual__">Enter namespace manually...</option>
+  </select>
+</label>
+<div className="toolbar-actions"><button disabled={connecting||!prepared||!draft} onClick={applyConnection}>Apply</button><button disabled={busy||connecting||!context} onClick={refreshCurrentView}>Refresh</button></div>
 <label className="metrics-refresh-control">
   Metrics refresh
   <select
@@ -280,7 +449,22 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
     <option value={60}>60 seconds</option>
   </select>
 </label>
-</section>
+</section>{browser&&<section className="local-browser" role="dialog" aria-label="Browse local kubeconfig"><div className="toolbar"><strong>Open kubeconfig</strong></div>
+<div className="toolbar browser-location">
+  <span title={browser.path}>{browser.path}</span>
+  
+</div>
+{browseError&&<p role="alert">{browseError}</p>}<div className="local-browser-list">
+{browser.parent&&
+  <button
+    disabled={browseBusy}
+    onClick={()=>browse(browser.parent)}
+  >📁 ..</button>
+}
+{browser.entries.map(e=><button key={e.path} disabled={browseBusy} onClick={()=>e.directory?browse(e.path):chooseSource(e.path)}>{e.directory?"📁":"📄"} {e.name}</button>)}</div><small>Only select trusted kubeconfig sources.</small></section>}
+{namespaceWarning&&<p role="status">{namespaceWarning}</p>}
+{!context?<p>{connecting?"Discovering connection…":"Select a trusted kubeconfig source, context and namespace, then Apply."}</p>:<>
+
 <div className="view-controls cluster-navigation">
   <button
     aria-pressed={clusterView==="workloads"}
@@ -292,28 +476,39 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
     aria-pressed={clusterView==="nodes"}
     onClick={()=>{expand(false);setClusterView("nodes")}}
   >Nodes</button>
+
+          <button
+            disabled={!context||busy}
+            aria-pressed={clusterView==="search"}
+            onClick={()=>{expand(false);setClusterView("search")}}
+          >Global Search</button>
+
 </div>
 
 {clusterView==="nodes"
   ? <NodesPanel
+      contextName={contextName}
       key={context+":"+connectionVersion}
       context={context}
       interval={metricInterval}
       refresh={nodeRefresh}
     />
+  
+  : clusterView==="search"
+    ? <SearchPanel
+        key={context+":"+connectionVersion+":"+ns+":"+searchRefresh}
+        context={context}
+        namespace={ns}
+        onOpenResource={openSearchResource}
+        inventory={items}
+      />
   : <><div className="search-row">
 <div className="search-box">
 <span className="search-icon" aria-hidden="true">⌕</span>
-<input className="search" aria-label="Search resources" placeholder="Search resources…" value={search} onChange={e=>Q(e.target.value)}/>
+<input className="search" aria-label="Search resources" placeholder="Search name, kind, namespace…" value={search} onChange={e=>Q(e.target.value)}/>
 {search&&<button className="search-clear" aria-label="Clear search" onClick={()=>Q("")}>×</button>}
 </div>
-<select className="kind-filter" aria-label="Filter by resource kind"
-  value={kindFilter} onChange={e=>setKindFilter(e.target.value)}>
-  <option value="All">All resource kinds</option>
-  {[...new Set([...resourceKinds,...(kindFilter==="All"?[]:[kindFilter])])].sort().map(k=>
-    <option key={k} value={k}>{k}</option>
-  )}
-</select>
+
 <span className="metrics-refresh-status" role="status">
   {currentMetrics.loading
     ? "Loading metrics…"
@@ -328,20 +523,28 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
 <span className="refresh-status" role="status">
 {busy?"Refreshing…":lastRefresh?"Last refreshed: "+lastRefresh.toLocaleTimeString():"Not refreshed yet"}
 </span>
-</div>{error&&<p role="alert" className="error">{error}</p>}{warnings.map(w=><p className="error" key={w}>{w}</p>)}<div className={"panels "+(expanded?"graph-expanded":"")}><section className="resource-panel"><h2>Resource tree <small>{(search||kindFilter!=="All")?`${items.filter(directMatch).length} matches · ${items.length} total`:`${items.length} resources`}</small></h2><div className="view-controls"><button aria-pressed={view==='list'} onClick={()=>{expand(false);V('list')}}>List view</button><button aria-pressed={view==='graph'} onClick={()=>{setFit(true);V('graph')}}>Graph view</button><button aria-pressed={view==='dep'} onClick={()=>{expand(false);A(selected);V('dep')}}>Dependency view</button><button onClick={()=>F({})}>Expand all</button><button onClick={()=>F(Object.fromEntries(items.map(x=>[x.metadata.uid,true])))}>Collapse all</button>{view==='graph'&&<label>Zoom <input type="range" min="0.05" max="2" step="0.05" value={zoom} onChange={e=>changeZoom(Number(e.target.value))}/> <button aria-label="Zoom out" onClick={()=>changeZoom(zoom/1.2)}>−</button>
+</div>{warnings.map(w=><p className="error" key={w}>{w}</p>)}<div className={"panels "+(expanded?"graph-expanded":"")}><section className="resource-panel"><h2>Resource tree <small>{(search||kindFilter!=="All")?`${items.filter(directMatch).length} matches · ${items.length} total`:`${items.length} resources`}</small></h2><div className="view-controls"><button aria-pressed={view==='list'} onClick={()=>resetResourceView('list')}>List view</button><button aria-pressed={view==='graph'} onClick={()=>resetResourceView('graph')}>Graph view</button><button aria-pressed={view==='dep'} onClick={()=>{expand(false);A(selected);V('dep')}}>Dependency view</button><button onClick={clearSelection}>Clear selection</button>
+        <button onClick={()=>F({})}>Expand all</button><button onClick={()=>F(Object.fromEntries(items.map(x=>[x.metadata.uid,true])))}>Collapse all</button>{view==='graph'&&<label>Zoom <input type="range" min="0.05" max="2" step="0.05" value={zoom} onChange={e=>changeZoom(Number(e.target.value))}/> <button aria-label="Zoom out" onClick={()=>changeZoom(zoom/1.2)}>−</button>
 <span className="zoom-value">{Math.round(zoom*100)}%</span>
 <button aria-label="Zoom in" onClick={()=>changeZoom(zoom*1.2)}>+</button>
 <button onClick={()=>changeZoom(1)}>100%</button><button onClick={()=>{setFitMode("width");setFit(false);requestAnimationFrame(()=>setFit(true))}}>Fit to width</button>
 <button onClick={()=>{setFitMode("screen");setFit(false);requestAnimationFrame(()=>setFit(true))}}>Fit to screen</button>
-<button onClick={()=>{setFitMode("width");setFit(false);requestAnimationFrame(()=>setFit(true))}}>Reset view</button><button onClick={()=>{setFit(true);expand(v=>!v)}}>{expanded?"Exit full screen":"Full screen"}</button></label>}</div>{busy?<p role="status" className="loading-state">Loading resources…</p>:view==='dep'? (anchor?<><button onClick={()=>A(selected)} disabled={!selected}>Focus selected resource</button><Dependencies key={anchor.metadata.uid} context={context} resource={anchor} children={children} onSelect={x=>{const found=items.find(y=>y.kind===x.kind&&y.metadata.name===x.metadata.name&&y.metadata.namespace===x.metadata.namespace);select(found||x)}}/></>:<p>Select a resource in List or Graph view first.</p>):view==='list'?<ul className="tree">{roots.map(x=>node(x))}</ul>:<div ref={scrollRef} className="graph-scroll" tabIndex={0} aria-label="Interactive resource graph"
+<button onClick={()=>{setFitMode("width");setFit(false);requestAnimationFrame(()=>setFit(true))}}>Reset view</button><button onClick={()=>{setFit(true);expand(v=>!v)}}>{expanded?"Exit full screen":"Full screen"}</button></label>}</div>{busy?<p role="status" className="loading-state">Loading resources…</p>:view==='dep'? (anchor?<><button onClick={()=>A(selected)} disabled={!selected}>Focus selected resource</button><Dependencies key={anchor.metadata.uid} context={context} resource={anchor} children={children} onSelect={x=>{const found=items.find(y=>y.kind===x.kind&&y.metadata.name===x.metadata.name&&y.metadata.namespace===x.metadata.namespace);select(found||x)}}/></>:<p>Select a resource in List or Graph view first.</p>):view==='list'?<ul className="tree"
+          onClick={e=>{
+            if(e.target===e.currentTarget)clearSelection();
+          }}>{roots.map(x=>node(x))}</ul>:<div ref={scrollRef} className="graph-scroll" tabIndex={0} aria-label="Interactive resource graph"
 onPointerDown={startPan}
 onPointerMove={movePan}
 onPointerUp={stopPan}
 onPointerCancel={stopPan}
-onLostPointerCapture={stopPan}><div ref={canvasRef} className="graph-canvas" style={{zoom}}>{roots.filter(x=>matches(x)).map(x=><ul className="graph-root" key={x.metadata.uid}>{graph(x)}</ul>)}</div></div>}{!busy&&!items.length&&!error&&<div className="empty-state"><strong>No resources found</strong><p>Try selecting another namespace or refreshing your connection.</p></div>}</section><section><h2>Resource details</h2>{selected?<><h3>{selected.metadata.name}</h3><p>{selected.kind} · {selected.metadata.namespace}</p><p><HealthStatus resource={selected}/></p><div className="view-controls">{["Details",...(metricKinds.has(selected.kind)&&!selected.metadata.uid.startsWith("ref:")?["Metrics"]:[]),"Logs","YAML"].map(t=><button key={t} aria-pressed={tab===t} onClick={()=>Tab(t)}>{t}</button>)}</div>{tab==="Metrics"?<MetricsPanel
+onLostPointerCapture={stopPan}><div ref={canvasRef}
+          onClick={e=>{
+            if(e.target===e.currentTarget)clearSelection();
+          }}
+          className="graph-canvas" style={{zoom}}>{roots.filter(x=>matches(x)).map(x=><ul className="graph-root" key={x.metadata.uid}>{graph(x)}</ul>)}</div></div>}{!busy&&!items.length&&!error&&<div className="empty-state"><strong>No resources found</strong><p>Try selecting another namespace or refreshing your connection.</p></div>}</section><section><h2>Resource details</h2>{selected?<><h3>{selected.metadata.name}</h3><p>{selected.kind} · {selected.metadata.namespace}</p><p><HealthStatus resource={selected}/></p><div className="view-controls">{["Details",...(metricKinds.has(selected.kind)&&!selected.metadata.uid.startsWith("ref:")?["Metrics"]:[]),"Logs","YAML"].map(t=><button key={t} aria-pressed={tab===t} onClick={()=>Tab(t)}>{t}</button>)}</div>{tab==="Metrics"?<MetricsPanel
       resource={selected}
       children={children}
       metrics={podMetrics}
       state={currentMetrics}
-    />:tab==="YAML"?<ObjectDetails key={selected.metadata.uid+"yaml"} context={context} resource={selected} yaml/>:tab==="Logs"?<Logs key={selected.metadata.uid} resource={selected} children={children} context={context}/>:selected.metadata.uid.startsWith("ref:")||selected.kind==="Secret"?<ObjectDetails key={selected.metadata.uid} context={context} resource={selected}/>:<><h4>Labels</h4><pre>{JSON.stringify(selected.metadata.labels||{},null,2)}</pre><h4>Status</h4><pre>{JSON.stringify(selected.status||{},null,2)}</pre></>}</>:<p>Select a resource to inspect it.</p>}</section></div></>}</main></>}
+    />:tab==="YAML"?<ObjectDetails key={selected.metadata.uid+"yaml"} context={context} resource={selected} yaml/>:tab==="Logs"?<Logs key={selected.metadata.uid} resource={selected} children={children} context={context}/>:selected.metadata.uid.startsWith("ref:")||selected.kind==="Secret"?<ObjectDetails key={selected.metadata.uid} context={context} resource={selected}/>:<><h4>Labels</h4><pre>{JSON.stringify(selected.metadata.labels||{},null,2)}</pre><h4>Status</h4><pre>{JSON.stringify(selected.status||{},null,2)}</pre></>}</>:<p>Select a resource to inspect it.</p>}</section></div></>}</>}</main></>}
 createRoot(document.getElementById('root')).render(<App/>);
