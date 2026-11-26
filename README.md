@@ -2,7 +2,7 @@
 <h1 align="center">KubeTree</h1>
 <p align="center"><strong>Visualize your Kubernetes.</strong><br>Local-first Kubernetes resource visualization and troubleshooting.</p>
 <p align="center"><a href="https://github.com/kubetre/kubetree/releases"><strong>Download KubeTree</strong></a> · <a href="docs/user-guide.md">Documentation</a> · <a href="https://kubetre.com">Website</a> · <a href="https://github.com/kubetre/kubetree/issues">Support</a></p>
-<p align="center">v0.1.4 · Read-only · Local-first</p>
+<p align="center">v0.1.5 · Read-only · Local-first</p>
 
 ![KubeTree graph view showing CoreDNS ownership hierarchy](docs/images/graph-view.png)
 

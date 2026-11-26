@@ -1,3 +1,5 @@
+.DEFAULT_GOAL := build
+
 .PHONY: build frontend run test
 frontend:
 	cd frontend && npm ci --no-audit --no-fund && npm run build

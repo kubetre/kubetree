@@ -12,3 +12,151 @@
 
 /* Responsive toolbar and graph workspace */
 header{flex-wrap:wrap;gap:12px}.header-actions{margin-left:auto}.brand{min-width:0;max-width:100%}.toolbar label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-width:0}.toolbar .namespace-control{gap:12px}.toolbar button,.toolbar select{min-height:38px}.toolbar select{max-width:min(100%,280px)}.view-controls{align-items:center}.view-controls label{flex-wrap:wrap}.graph-canvas{align-items:flex-start;min-width:0}.graph-root{margin-inline:auto}.graph-expanded{position:fixed;inset:0;z-index:1000;background:var(--c130e20);display:block;padding:12px}.graph-expanded .resource-panel{height:100%;display:flex;flex-direction:column;overflow:auto}.graph-expanded>section:not(.resource-panel){display:none}.graph-expanded .graph-scroll{flex:1;min-height:0;max-height:none}.empty-state{text-align:center;padding:28px 12px;color:var(--cbbaacb)}.loading-state{color:var(--cd9a6ff)}
+
+/* v0.1.5 — Toolbar and header refinement */
+.toolbar {
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.toolbar .namespace-control {
+  gap: 8px;
+}
+
+.toolbar button,
+.toolbar select {
+  min-height: 38px;
+  height: 38px;
+  margin: 0;
+}
+
+.toolbar button {
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
+.toolbar > label:first-child {
+  margin-right: 8px;
+}
+
+header {
+  padding: 12px 3%;
+}
+
+main {
+  padding: 16px 3%;
+}
+
+.brand img {
+  width: 165px;
+}
+
+.view-controls {
+  gap: 8px;
+  align-items: center;
+}
+
+/* v0.1.5 — Interactive graph navigation */
+.graph-scroll {
+  cursor: grab;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.graph-scroll.panning {
+  cursor: grabbing;
+  user-select: none;
+}
+
+.graph-scroll.panning * {
+  cursor: grabbing !important;
+}
+
+.graph-scroll button {
+  cursor: pointer;
+}
+
+.zoom-value {
+  min-width: 48px;
+  text-align: center;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.graph-scroll:focus-visible {
+  outline: 2px solid var(--ce4b2ff);
+  outline-offset: 2px;
+}
+
+/* v0.1.5 — Clean graph workspace */
+.graph-scroll {
+  height: 65vh;
+  overflow: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.graph-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.graph-expanded .graph-scroll {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+}
+
+.graph-canvas {
+  margin-inline: auto;
+}
+
+/* v0.1.5 — Search and refresh status */
+.search-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 180px;
+}
+
+.search-box .search {
+  margin: 0;
+  padding-left: 34px;
+  padding-right: 36px;
+  height: 38px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 22px;
+  color: var(--cbbaacb);
+  pointer-events: none;
+}
+
+.search-clear {
+  position: absolute;
+  right: 5px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  padding: 2px 8px;
+  font-size: 20px;
+}
+
+.refresh-status {
+  font-size: 12px;
+  color: var(--cbbaacb);
+  white-space: nowrap;
+  min-width: 175px;
+}
