@@ -160,3 +160,16 @@ main {
   white-space: nowrap;
   min-width: 175px;
 }
+
+/* Keep toolbar action buttons together */
+.toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.toolbar-actions > button {
+  flex: 0 0 auto;
+  margin: 0;
+  white-space: nowrap;
+}

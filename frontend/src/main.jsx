@@ -77,7 +77,7 @@ function graph(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!match
 return <><header><a className="brand" href="https://kubetre.com" target="_blank" rel="noopener noreferrer"><img src={brandLogo} alt="KubeTre"/><span className="product-name">KubeTree</span></a><div className="header-actions"><span className="pill">READ ONLY · LOCAL</span><button type="button" className="theme-toggle" aria-label={theme==='light'?'Switch to dark theme':'Switch to light theme'} onClick={()=>setTheme(t=>t==='light'?'dark':'light')}>{theme==='light'?'☾ Dark':'☀ Light'}</button></div></header><main><section className="toolbar"><label>Context <b>{context||'Not connected'}</b></label><label className="namespace-control">Namespace <select value={draft} disabled={busy} onChange={e=>T(e.target.value)}>
 <option value="*">All namespaces</option>
 {[...new Set(['default', ...(draft==='*'?[]:[draft]), ...names])].map(n=><option key={n} value={n}>{n}</option>)}
-</select><button disabled={busy} onClick={()=>N(draft.trim()||'default')}>Apply</button></label><button disabled={busy||!context} onClick={load}>Refresh</button><button disabled={busy} onClick={connect}>Reconnect</button></section><div className="search-row">
+</select></label><div className="toolbar-actions"><button disabled={busy} onClick={()=>N(draft.trim()||'default')}>Apply</button><button disabled={busy||!context} onClick={load}>Refresh</button><button disabled={busy} onClick={connect}>Reconnect</button></div></section><div className="search-row">
 <div className="search-box">
 <span className="search-icon" aria-hidden="true">⌕</span>
 <input className="search" aria-label="Search resources" placeholder="Search resources…" value={search} onChange={e=>Q(e.target.value)}/>
