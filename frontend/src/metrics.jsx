@@ -6,7 +6,8 @@ import {
   summarize,
   percentage,
   formatCPU,
-  formatMemory
+  formatMemory,
+  sampleRange
 } from "./metrics.js";
 
 function display(summary, format, fallback = "N/A") {
@@ -86,6 +87,8 @@ export function MetricsPanel({
 }) {
   const rows = metricRows(resource, children, metrics);
 
+  const samples = sampleRange(rows);
+
   return <div className="metrics-panel">
 
     {state.loading &&
@@ -114,6 +117,19 @@ export function MetricsPanel({
         format={formatMemory}
       />
     </div>
+
+    <p className="hint">
+      Metrics samples: {samples
+        ? new Date(samples.oldest).toLocaleString() +
+          (samples.oldest !== samples.newest
+            ? " – " + new Date(samples.newest).toLocaleString()
+            : "")
+        : "N/A"}
+      <br/>
+      Metrics retrieved: {
+        state.updatedAt?.toLocaleTimeString() || "N/A"
+      }
+    </p>
 
     <h4>Container metrics</h4>
 

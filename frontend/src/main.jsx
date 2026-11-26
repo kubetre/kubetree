@@ -62,19 +62,34 @@ useEffect(()=>{
         ...data,context,namespace:ns,
         refresh:lastRefresh,
         loading:false,
-        updatedAt:new Date()
+        updatedAt:data.available?new Date():null
       });
 
-      if(data.available&&metricInterval>0){
-        timer=setTimeout(readMetrics,metricInterval*1000);
+      if(active&&metricInterval>0){
+        if(data.available){
+          timer=setTimeout(readMetrics,metricInterval*1000);
+        }else if(data.retryable){
+          timer=setTimeout(
+            readMetrics,
+            Math.max(metricInterval,30)*1000
+          );
+        }
       }
 
     } catch(e) {
       if(active)setMetricState({
         context,namespace:ns,refresh:lastRefresh,
         available:false,items:[],loading:false,
-        message:"Metrics request failed"
+        message:"Metrics request failed",
+        retryable:true
       });
+
+      if(active&&metricInterval>0){
+        timer=setTimeout(
+          readMetrics,
+          Math.max(metricInterval,30)*1000
+        );
+      }
     }
   }
 
@@ -304,7 +319,9 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
     : currentMetrics.available
       ? "Metrics updated: "+currentMetrics.updatedAt?.toLocaleTimeString()
       : metricInterval>0
-        ? "Metrics auto-refresh stopped"
+        ? currentMetrics.retryable
+          ? "Metrics unavailable · retrying"
+          : "Metrics auto-refresh stopped"
         : "Metrics unavailable"}
 </span>
 <span className="refresh-status" role="status">

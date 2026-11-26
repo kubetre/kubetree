@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 type MetricUsage struct {
@@ -31,6 +32,35 @@ type MetricsResponse struct {
 	Available bool         `json:"available"`
 	Items     []MetricItem `json:"items"`
 	Message   string       `json:"message,omitempty"`
+	Retryable bool         `json:"retryable"`
+}
+
+func metricsError(err error) (string, bool) {
+	msg := strings.ToLower(err.Error())
+
+	switch {
+	case strings.Contains(msg, "forbidden"):
+		return "Metrics access denied by Kubernetes RBAC. Check permissions or select an authorized namespace.", false
+
+	case strings.Contains(msg, "unauthorized"),
+		strings.Contains(msg, "must be logged in"):
+		return "Kubernetes authentication failed. Reconnect after checking your credentials.", false
+
+	case strings.Contains(msg, "not found"),
+		strings.Contains(msg, "could not find the requested resource"):
+		return "Metrics API unavailable. Check whether Metrics Server is installed and running.", false
+
+	case strings.Contains(msg, "timeout"),
+		strings.Contains(msg, "deadline exceeded"):
+		return "Metrics request timed out.", true
+
+	case strings.Contains(msg, "service unavailable"),
+		strings.Contains(msg, "connection refused"):
+		return "Metrics service temporarily unavailable.", true
+
+	default:
+		return "Unable to retrieve metrics. Check cluster connectivity and Metrics API availability.", true
+	}
 }
 
 func metricsRoutes(mux *http.ServeMux) {
@@ -130,7 +160,7 @@ func metricsRoutes(mux *http.ServeMux) {
 		)
 
 		if err != nil {
-			result.Message = fmt.Sprintf("Metrics unavailable: %v", err)
+			result.Message, result.Retryable = metricsError(err)
 			reply(w, result, nil)
 			return
 		}

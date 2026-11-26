@@ -108,11 +108,17 @@ export function NodesPanel({context, interval, refresh}) {
         setMetrics({
           ...data,
           loading: false,
-          updatedAt: new Date()
+          updatedAt: data.available ? new Date() : null
         });
 
-        if (data.available && interval > 0)
-          timer = setTimeout(read, interval * 1000);
+        if (active && interval > 0) {
+          if (data.available)
+            timer = setTimeout(read, interval * 1000);
+          else if (data.retryable)
+            timer = setTimeout(
+              read, Math.max(interval, 30) * 1000
+            );
+        }
 
       } catch {
         if (active)
@@ -120,8 +126,14 @@ export function NodesPanel({context, interval, refresh}) {
             available: false,
             loading: false,
             items: [],
-            message: "Node metrics request failed."
+            message: "Node metrics request failed.",
+            retryable: true
           });
+
+        if (active && interval > 0)
+          timer = setTimeout(
+            read, Math.max(interval, 30) * 1000
+          );
       }
     }
 
@@ -184,7 +196,13 @@ export function NodesPanel({context, interval, refresh}) {
         </strong>
         <small>
           {metrics.loading ? "Loading…" :
-           !metrics.available ? "Unavailable" :
+           !metrics.available
+             ? interval && metrics.retryable
+               ? "Unavailable · retrying"
+               : interval
+                 ? "Unavailable · polling stopped"
+                 : "Unavailable"
+             :
            interval ? `Auto-refresh: ${interval}s` : "Manual"}
         </small>
       </div>

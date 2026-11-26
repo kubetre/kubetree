@@ -117,6 +117,8 @@ export function metricRows(resource, children, metrics) {
         pod: pod.metadata.name,
         namespace: pod.metadata.namespace,
         container: container.name,
+        timestamp: usage ? metric?.timestamp : null,
+        window: usage ? metric?.window : null,
         cpu: quantity(usage?.cpu),
         memory: quantity(usage?.memory),
         cpuRequest: quantity(container.resources?.requests?.cpu),
@@ -142,5 +144,21 @@ export function summarize(rows, field) {
     complete: rows.length > 0 && values.length === rows.length,
     count: values.length,
     total: rows.length
+  };
+}
+
+
+export function sampleRange(rows) {
+  const times = rows
+    .filter(row => row.timestamp &&
+      (row.cpu != null || row.memory != null))
+    .map(row => Date.parse(row.timestamp))
+    .filter(Number.isFinite);
+
+  if (!times.length) return null;
+
+  return {
+    oldest: Math.min(...times),
+    newest: Math.max(...times)
   };
 }
