@@ -434,3 +434,49 @@ html[data-theme="light"] .health-unknown   { color: #52525b; }
     margin-left: 0;
   }
 }
+
+/* Cluster Node metrics */
+.cluster-navigation {
+  margin: 12px 0;
+}
+
+.nodes-panel {
+  min-width: 0;
+}
+
+.nodes-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.nodes-heading h2,
+.nodes-heading h3 {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.node-metric-card {
+  border: 1px solid var(--c49365e);
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 16px;
+}
+
+.node-metric-card .metric-grid {
+  margin-top: 12px;
+}
+
+.node-metric-card .hint {
+  margin-bottom: 0;
+}
+
+.metric-table {
+  min-width: 650px;
+}
+
+.metric-table td:first-child small {
+  white-space: nowrap;
+}

@@ -44,6 +44,7 @@ export function quantity(value) {
 
 export function formatCPU(value) {
   if (value == null) return "N/A";
+  if (value > 0 && value < 0.00001) return "<0.01m";
   return value >= 1
     ? `${Number(value.toFixed(2))} cores`
     : `${Number((value * 1000).toFixed(2))}m`;

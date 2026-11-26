@@ -1,9 +1,10 @@
+import {NodesPanel} from "./nodes.jsx";
 import {MetricsPanel,MetricSummary} from "./metrics.jsx";
 import {metricKinds} from "./metrics.js";
 import {resourceHealth} from "./health.js";
 import {Dependencies,ObjectDetails} from './dependencies.jsx';
 import React,{useState,useEffect,useRef} from 'react';import{createRoot}from'react-dom/client';import './style.css';import brandLogo from './kubetre-logo.png';
-async function api(path,params={}){const r=await fetch('/api/'+path+'?'+new URLSearchParams(params),{headers:{'X-KubeTree-Local':'1'}});if(!r.ok){const t=await r.text();try{throw new Error(JSON.parse(t).error||t)}catch(e){if(e instanceof SyntaxError)throw new Error(t);throw e}}return r.json()}
+async function api(path,params={},signal){const r=await fetch('/api/'+path+'?'+new URLSearchParams(params),{signal,headers:{'X-KubeTree-Local':'1'}});if(!r.ok){const t=await r.text();try{throw new Error(JSON.parse(t).error||t)}catch(e){if(e instanceof SyntaxError)throw new Error(t);throw e}}return r.json()}
 function Logs({resource,children,context}){const pods=[];function visit(x,seen=new Set()){if(seen.has(x.metadata.uid))return;seen.add(x.metadata.uid);if(x.kind==='Pod')pods.push(x);else (children.get(x.metadata.uid)||[]).forEach(y=>visit(y,seen))}visit(resource);const [id,S]=useState(pods[0]?.metadata.uid||''),[container,C]=useState(''),[tail,T]=useState('100'),[previous,P]=useState(false),[timestamps,TS]=useState(true),[live,L]=useState(false),[output,O]=useState(''),[error,E]=useState(''),[search,Q]=useState('');const pod=pods.find(x=>x.metadata.uid===id);const containers=[...(pod?.spec?.containers||[]),...(pod?.spec?.initContainers||[])];const name=containers.some(x=>x.name===container)?container:containers[0]?.name;const [refresh,R]=useState(0);useEffect(()=>{let active=true,timer;const controller=new AbortController();async function read(){if(!pod||!name)return;try{const r=await fetch('/api/logs?'+new URLSearchParams({context,namespace:pod.metadata.namespace,pod:pod.metadata.name,container:name,tail,previous,timestamps}),{signal:controller.signal,headers:{'X-KubeTree-Local':'1'}});const data=await r.json();if(!r.ok)throw Error(data.error||'Log request failed');if(active){O(data.logs);E('')}}catch(e){if(active)E(e.message)}finally{if(active&&live)timer=setTimeout(read,3000)}}O('');E('');read();return()=>{active=false;clearTimeout(timer);controller.abort()}},[context,id,name,tail,previous,timestamps,live,refresh]);if(!pods.length)return <p>No associated Pods available.</p>;const filtered=output.split('\n').filter(x=>x.toLowerCase().includes(search.toLowerCase())).join('\n');return <div className="logs"><label>Pod <select value={id} onChange={e=>{S(e.target.value);C('')}}>{pods.map(x=><option key={x.metadata.uid} value={x.metadata.uid}>{x.metadata.name}</option>)}</select></label><label>Container <select value={name||''} onChange={e=>C(e.target.value)}>{containers.map(x=><option key={x.name}>{x.name}</option>)}</select></label><label>Lines <select value={tail} onChange={e=>T(e.target.value)}>{[100,500,1000].map(x=><option key={x}>{x}</option>)}</select></label><label><input type="checkbox" checked={previous} onChange={e=>P(e.target.checked)}/>Previous container</label><label><input type="checkbox" checked={timestamps} onChange={e=>TS(e.target.checked)}/>Timestamps</label><button onClick={()=>L(!live)}>{live?'Pause':'Auto-refresh (3s)'}</button><button onClick={()=>R(x=>x+1)}>Refresh</button><input placeholder="Search logs" value={search} onChange={e=>Q(e.target.value)}/><button onClick={()=>navigator.clipboard.writeText(filtered).catch(e=>E(e.message))}>Copy</button><button onClick={()=>{const url=URL.createObjectURL(new Blob([filtered],{type:'text/plain'}));const a=document.createElement('a');a.href=url;a.download='container.log';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}}>Download</button>{error&&<p className="error">{error}</p>}<pre className="log-output">{filtered||'No log output'}</pre></div>}
 
 function HealthStatus({resource}) {
@@ -25,12 +26,16 @@ const resourceKinds=[...new Set(items.map(x=>x.kind))].sort();
 
 const [lastRefresh,setLastRefresh]=useState(null);
 const [metricInterval,setMetricInterval]=useState(0);
+const [clusterView,setClusterView]=useState("workloads");
+const [nodeRefresh,setNodeRefresh]=useState(0);
+const [connectionVersion,setConnectionVersion]=useState(0);
+const inventoryRequest=useRef(null);
 const [metricState,setMetricState]=useState({
   available:false,items:[],loading:false,message:""
 });
 
 useEffect(()=>{
-  if(!context||!lastRefresh||busy)return;
+  if(!context||!lastRefresh||busy||clusterView==="nodes")return;
 
   let active=true;
   let timer;
@@ -91,7 +96,7 @@ useEffect(()=>{
     clearTimeout(timer);
     controller.abort();
   };
-},[context,ns,lastRefresh,busy,metricInterval]);
+},[context,ns,lastRefresh,busy,metricInterval,clusterView]);
 
 const currentMetrics=
   !busy &&
@@ -139,7 +144,7 @@ useEffect(()=>{
   }
   el.addEventListener("wheel",wheel,{passive:false});
   return()=>el.removeEventListener("wheel",wheel);
-},[view,busy,expanded]);
+},[view,busy,expanded,clusterView]);
 
 function startPan(e){
   if(e.button!==0||e.target.closest("button,input"))return;
@@ -168,10 +173,55 @@ Z(Math.min(1,Math.max(.05,fitMode==="screen"?Math.min(widthScale,heightScale):wi
 requestAnimationFrame(()=>{
   el.scrollLeft=Math.max(0,(el.scrollWidth-el.clientWidth)/2);
   el.scrollTop=0;
-})};resize();const observer=new ResizeObserver(resize);observer.observe(el);for(const child of canvas.children)observer.observe(child);return()=>observer.disconnect()},[view,fit,fitMode,busy,items,search,kindFilter,collapsed,expanded]);function select(x){D(x);Tab('Details');if(view!=='dep')A(x)}
-async function connect(){E('');try{const c=(await api('context')).context;C(c);try{S(await api('namespaces',{context:c}))}catch(e){S([]);E('Namespace discovery failed: '+e.message);console.error(e)}}catch(e){E(e.message)}}
-useEffect(()=>{connect()},[]);useEffect(()=>{if(context)load()},[context,ns]);useEffect(()=>{try{localStorage.setItem("kubetree-namespace",ns)}catch{}},[ns]);
-async function load(){B(true);E('');I([]);D(null);A(null);W([]);try{const data=await api('resources',{context,namespace:ns});I(data.items);W(data.warnings);setLastRefresh(new Date())}catch(e){E(e.message)}finally{B(false)}}
+})};resize();const observer=new ResizeObserver(resize);observer.observe(el);for(const child of canvas.children)observer.observe(child);return()=>observer.disconnect()},[view,fit,fitMode,busy,items,search,kindFilter,collapsed,expanded,clusterView]);function select(x){D(x);Tab('Details');if(view!=='dep')A(x)}
+async function connect(){E('');try{const c=(await api('context')).context;C(c);setConnectionVersion(v=>v+1);try{S(await api('namespaces',{context:c}))}catch(e){S([]);E('Namespace discovery failed: '+e.message);console.error(e)}}catch(e){E(e.message)}}
+useEffect(()=>{connect()},[]);useEffect(()=>{
+  if(context)load();
+  return()=>inventoryRequest.current?.abort();
+},[context,ns,connectionVersion]);useEffect(()=>{try{localStorage.setItem("kubetree-namespace",ns)}catch{}},[ns]);
+async function load(){
+  inventoryRequest.current?.abort();
+
+  const controller=new AbortController();
+  inventoryRequest.current=controller;
+
+  B(true);
+  E('');
+  I([]);
+  D(null);
+  A(null);
+  W([]);
+  setLastRefresh(null);
+
+  try{
+    const data=await api(
+      'resources',
+      {context,namespace:ns},
+      controller.signal
+    );
+
+    if(controller.signal.aborted)return;
+
+    I(data.items);
+    W(data.warnings);
+    setLastRefresh(new Date());
+
+  }catch(e){
+    if(!controller.signal.aborted)E(e.message);
+  }finally{
+    if(inventoryRequest.current===controller &&
+       !controller.signal.aborted)B(false);
+  }
+}
+
+function refreshCurrentView(){
+  if(clusterView==="nodes"){
+    setNodeRefresh(v=>v+1);
+  }else{
+    load();
+  }
+}
+
 const ids=new Set(items.map(x=>x.metadata.uid));const children=new Map();const roots=[];for(const x of items){const p=x.metadata.ownerReferences?.find(o=>o.controller&&ids.has(o.uid));if(p){if(!children.has(p.uid))children.set(p.uid,[]);children.get(p.uid).push(x)}else roots.push(x)}
 function directMatch(x){
   const text=(x.kind+" "+x.metadata.name+" "+x.metadata.namespace).toLowerCase();
@@ -191,13 +241,13 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
   </div>
   <div className="scope-item">
     <span>Active namespace</span>
-    <strong>{ns==="*"?"All namespaces":ns}</strong>
+    <strong>{clusterView==="nodes"?"Cluster-wide":ns==="*"?"All namespaces":ns}</strong>
   </div>
-  {draft!==ns&&<span className="scope-pending">Namespace change not applied</span>}
-</div><section className="toolbar"><label className="namespace-control">Namespace <select value={draft} disabled={busy} onChange={e=>T(e.target.value)}>
+  {clusterView==="workloads"&&draft!==ns&&<span className="scope-pending">Namespace change not applied</span>}
+</div><section className="toolbar"><label className="namespace-control">Namespace <select value={draft} disabled={busy||clusterView==="nodes"} onChange={e=>T(e.target.value)}>
 <option value="*">All namespaces</option>
 {[...new Set(['default', ...(draft==='*'?[]:[draft]), ...names])].map(n=><option key={n} value={n}>{n}</option>)}
-</select></label><div className="toolbar-actions"><button disabled={busy} onClick={()=>N(draft.trim()||'default')}>Apply</button><button disabled={busy||!context} onClick={load}>Refresh</button><button disabled={busy} onClick={connect}>Reconnect</button></div>
+</select></label><div className="toolbar-actions"><button disabled={busy||clusterView==="nodes"} onClick={()=>N(draft.trim()||'default')}>Apply</button><button disabled={busy||!context} onClick={refreshCurrentView}>Refresh</button><button disabled={busy} onClick={connect}>Reconnect</button></div>
 <label className="metrics-refresh-control">
   Metrics refresh
   <select
@@ -214,7 +264,28 @@ return <><header><a className="brand" href="https://kubetre.com" target="_blank"
     <option value={60}>60 seconds</option>
   </select>
 </label>
-</section><div className="search-row">
+</section>
+<div className="view-controls cluster-navigation">
+  <button
+    aria-pressed={clusterView==="workloads"}
+    onClick={()=>setClusterView("workloads")}
+  >Workloads</button>
+
+  <button
+    disabled={!context||busy}
+    aria-pressed={clusterView==="nodes"}
+    onClick={()=>{expand(false);setClusterView("nodes")}}
+  >Nodes</button>
+</div>
+
+{clusterView==="nodes"
+  ? <NodesPanel
+      key={context+":"+connectionVersion}
+      context={context}
+      interval={metricInterval}
+      refresh={nodeRefresh}
+    />
+  : <><div className="search-row">
 <div className="search-box">
 <span className="search-icon" aria-hidden="true">⌕</span>
 <input className="search" aria-label="Search resources" placeholder="Search resources…" value={search} onChange={e=>Q(e.target.value)}/>
@@ -254,5 +325,5 @@ onLostPointerCapture={stopPan}><div ref={canvasRef} className="graph-canvas" sty
       children={children}
       metrics={podMetrics}
       state={currentMetrics}
-    />:tab==="YAML"?<ObjectDetails key={selected.metadata.uid+"yaml"} context={context} resource={selected} yaml/>:tab==="Logs"?<Logs key={selected.metadata.uid} resource={selected} children={children} context={context}/>:selected.metadata.uid.startsWith("ref:")||selected.kind==="Secret"?<ObjectDetails key={selected.metadata.uid} context={context} resource={selected}/>:<><h4>Labels</h4><pre>{JSON.stringify(selected.metadata.labels||{},null,2)}</pre><h4>Status</h4><pre>{JSON.stringify(selected.status||{},null,2)}</pre></>}</>:<p>Select a resource to inspect it.</p>}</section></div></main></>}
+    />:tab==="YAML"?<ObjectDetails key={selected.metadata.uid+"yaml"} context={context} resource={selected} yaml/>:tab==="Logs"?<Logs key={selected.metadata.uid} resource={selected} children={children} context={context}/>:selected.metadata.uid.startsWith("ref:")||selected.kind==="Secret"?<ObjectDetails key={selected.metadata.uid} context={context} resource={selected}/>:<><h4>Labels</h4><pre>{JSON.stringify(selected.metadata.labels||{},null,2)}</pre><h4>Status</h4><pre>{JSON.stringify(selected.status||{},null,2)}</pre></>}</>:<p>Select a resource to inspect it.</p>}</section></div></>}</main></>}
 createRoot(document.getElementById('root')).render(<App/>);

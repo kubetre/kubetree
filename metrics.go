@@ -34,6 +34,61 @@ type MetricsResponse struct {
 }
 
 func metricsRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/nodes", func(w http.ResponseWriter, r *http.Request) {
+		c := r.URL.Query().Get("context")
+		if c == "" {
+			http.Error(w, "Invalid context", 400)
+			return
+		}
+
+		b, err := kube(
+			r.Context(),
+			"--context="+c,
+			"get", "nodes",
+			"-o", "json",
+			"--request-timeout=15s",
+		)
+
+		if err != nil {
+			reply(w, map[string]any{
+				"available": false,
+				"items":     []any{},
+				"message":   "Node inventory unavailable: check API access and permissions.",
+			}, nil)
+			return
+		}
+
+		var data struct {
+			Items []struct {
+				Metadata struct {
+					Name string `json:"name"`
+				} `json:"metadata"`
+				Status struct {
+					Capacity    map[string]string `json:"capacity"`
+					Allocatable map[string]string `json:"allocatable"`
+					Conditions  []struct {
+						Type   string `json:"type"`
+						Status string `json:"status"`
+					} `json:"conditions"`
+				} `json:"status"`
+			} `json:"items"`
+		}
+
+		if err := json.Unmarshal(b, &data); err != nil {
+			reply(w, map[string]any{
+				"available": false,
+				"items":     []any{},
+				"message":   "Unable to read Node inventory.",
+			}, nil)
+			return
+		}
+
+		reply(w, map[string]any{
+			"available": true,
+			"items":     data.Items,
+		}, nil)
+	})
+
 	mux.HandleFunc("GET /api/metrics", func(w http.ResponseWriter, r *http.Request) {
 		q := r.URL.Query()
 		c := q.Get("context")

@@ -70,6 +70,7 @@ export function MetricSummary({resource, children, metrics}) {
   if (!metricKinds.has(resource.kind)) return null;
 
   const rows = metricRows(resource, children, metrics);
+  if (!rows.length) return null;
   const cpu = summarize(rows, "cpu");
   const memory = summarize(rows, "memory");
 
@@ -150,8 +151,8 @@ export function MetricsPanel({
       </div>}
 
     <p className="hint">
-      Metrics are sampled snapshots. Use the main Refresh
-      button to retrieve updated values. Partial values
+      Metrics are sampled snapshots. Use manual Refresh
+      or optional metrics auto-refresh. Partial values
       represent only containers with available data.
       Totals represent discovered active containers,
       not scheduler-calculated Pod reservations.
