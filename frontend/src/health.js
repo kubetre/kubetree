@@ -48,7 +48,7 @@ export function resourceHealth(resource) {
   }
 
   if (["Deployment", "ReplicaSet", "StatefulSet"].includes(resource.kind)) {
-    const total = s.replicas;
+    const total = resource.spec?.replicas ?? s.replicas;
     const ready = s.readyReplicas || 0;
 
     if (s.conditions?.some(c =>
@@ -59,7 +59,7 @@ export function resourceHealth(resource) {
     }
 
     if (total == null) return result("unknown", "Unknown");
-    if (total === 0) return result("unknown", "No replicas");
+    if (total === 0) return result("unknown", "Scaled to zero");
 
     return result(
       ready >= total ? "healthy" : "warning",

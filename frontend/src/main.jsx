@@ -1,3 +1,5 @@
+import {MetricsPanel,MetricSummary} from "./metrics.jsx";
+import {metricKinds} from "./metrics.js";
 import {resourceHealth} from "./health.js";
 import {Dependencies,ObjectDetails} from './dependencies.jsx';
 import React,{useState,useEffect,useRef} from 'react';import{createRoot}from'react-dom/client';import './style.css';import brandLogo from './kubetre-logo.png';
@@ -22,6 +24,65 @@ const [kindFilter,setKindFilter]=useState("All");
 const resourceKinds=[...new Set(items.map(x=>x.kind))].sort();
 
 const [lastRefresh,setLastRefresh]=useState(null);
+const [metricState,setMetricState]=useState({
+  available:false,items:[],loading:false,message:""
+});
+
+useEffect(()=>{
+  if(!context||!lastRefresh||busy)return;
+
+  let active=true;
+  const controller=new AbortController();
+
+  setMetricState({
+    context,namespace:ns,refresh:lastRefresh,
+    available:false,items:[],loading:true,message:""
+  });
+
+  fetch("/api/metrics?"+new URLSearchParams({
+    context,namespace:ns,scope:"pods"
+  }),{
+    signal:controller.signal,
+    headers:{"X-KubeTree-Local":"1"}
+  })
+  .then(r=>{
+    if(!r.ok)throw Error("Metrics request failed");
+    return r.json();
+  })
+  .then(data=>{
+    if(active)setMetricState({
+      ...data,context,namespace:ns,
+      refresh:lastRefresh,loading:false
+    });
+  })
+  .catch(()=>{
+    if(active)setMetricState({
+      context,namespace:ns,refresh:lastRefresh,
+      available:false,items:[],loading:false,
+      message:"Metrics request failed"
+    });
+  });
+
+  return()=>{
+    active=false;
+    controller.abort();
+  };
+},[context,ns,lastRefresh,busy]);
+
+const currentMetrics=
+  !busy &&
+  metricState.context===context &&
+  metricState.namespace===ns &&
+  metricState.refresh===lastRefresh
+    ? metricState
+    : {available:false,items:[],loading:busy};
+
+const podMetrics=new Map(
+  (currentMetrics.items||[]).map(x=>[
+    x.metadata.namespace+"/"+x.metadata.name,x
+  ])
+);
+
 const zoomRef=useRef(zoom);
 zoomRef.current=zoom;
 
@@ -93,8 +154,12 @@ function directMatch(x){
   return (kindFilter==="All"||x.kind===kindFilter)&&text.includes(search.toLowerCase());
 }
 function matches(x,seen=new Set()){if(seen.has(x.metadata.uid))return false;seen.add(x.metadata.uid);return directMatch(x)||(children.get(x.metadata.uid)||[]).some(y=>matches(y,seen))}
-function node(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!matches(x))return null;const next=new Set(seen).add(id),kids=children.get(id)||[];return <li key={id}><div className={'node '+(selected?.metadata.uid===id?'selected':'')}><button className="toggle" aria-label="Toggle children" disabled={!kids.length} onClick={()=>F(old=>({...old,[id]:!old[id]}))}>{kids.length?(collapsed[id]?'▸':'▾'):'·'}</button><button className="resource" onClick={()=>select(x)}><span className="kind">{x.kind}</span> {x.metadata.name}<small>{x.metadata.namespace} · <HealthStatus resource={x}/></small></button></div>{!collapsed[id]&&kids.length>0&&<ul>{kids.map(y=>node(y,next))}</ul>}</li>}
-function graph(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!matches(x))return null;const next=new Set(seen).add(id),kids=(children.get(id)||[]).filter(y=>matches(y)&&!next.has(y.metadata.uid));return <li key={id}><div className={'graph-card '+(selected?.metadata.uid===id?'selected':'')}><button className="graph-resource" onClick={()=>select(x)}><span className="kind">{x.kind}</span><strong>{x.metadata.name}</strong><small>{x.metadata.namespace} · <HealthStatus resource={x}/></small></button>{kids.length>0&&<button className="graph-toggle" aria-label={collapsed[id]?'Expand children':'Collapse children'} aria-expanded={!collapsed[id]} onClick={()=>F(old=>({...old,[id]:!old[id]}))}>{collapsed[id]?'＋':'−'} {kids.length}</button>}</div>{!collapsed[id]&&kids.length>0&&<ul>{kids.map(y=>graph(y,next))}</ul>}</li>}
+function node(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!matches(x))return null;const next=new Set(seen).add(id),kids=children.get(id)||[];return <li key={id}><div className={'node '+(selected?.metadata.uid===id?'selected':'')}><button className="toggle" aria-label="Toggle children" disabled={!kids.length} onClick={()=>F(old=>({...old,[id]:!old[id]}))}>{kids.length?(collapsed[id]?'▸':'▾'):'·'}</button><button className="resource" onClick={()=>select(x)}><span className="kind">{x.kind}</span> {x.metadata.name}<small>{x.metadata.namespace} · <HealthStatus resource={x}/></small>
+<MetricSummary resource={x} children={children} metrics={podMetrics}/>
+</button></div>{!collapsed[id]&&kids.length>0&&<ul>{kids.map(y=>node(y,next))}</ul>}</li>}
+function graph(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!matches(x))return null;const next=new Set(seen).add(id),kids=(children.get(id)||[]).filter(y=>matches(y)&&!next.has(y.metadata.uid));return <li key={id}><div className={'graph-card '+(selected?.metadata.uid===id?'selected':'')}><button className="graph-resource" onClick={()=>select(x)}><span className="kind">{x.kind}</span><strong>{x.metadata.name}</strong><small>{x.metadata.namespace} · <HealthStatus resource={x}/></small>
+<MetricSummary resource={x} children={children} metrics={podMetrics}/>
+</button>{kids.length>0&&<button className="graph-toggle" aria-label={collapsed[id]?'Expand children':'Collapse children'} aria-expanded={!collapsed[id]} onClick={()=>F(old=>({...old,[id]:!old[id]}))}>{collapsed[id]?'＋':'−'} {kids.length}</button>}</div>{!collapsed[id]&&kids.length>0&&<ul>{kids.map(y=>graph(y,next))}</ul>}</li>}
 return <><header><a className="brand" href="https://kubetre.com" target="_blank" rel="noopener noreferrer"><img src={brandLogo} alt="KubeTre"/><span className="product-name">KubeTree</span></a><div className="header-actions"><span className="pill">READ ONLY · LOCAL</span><button type="button" className="theme-toggle" aria-label={theme==='light'?'Switch to dark theme':'Switch to light theme'} onClick={()=>setTheme(t=>t==='light'?'dark':'light')}>{theme==='light'?'☾ Dark':'☀ Light'}</button></div></header><main><div className="active-scope">
   <div className="scope-item">
     <span>Active context</span>
@@ -134,5 +199,10 @@ onPointerDown={startPan}
 onPointerMove={movePan}
 onPointerUp={stopPan}
 onPointerCancel={stopPan}
-onLostPointerCapture={stopPan}><div ref={canvasRef} className="graph-canvas" style={{zoom}}>{roots.filter(x=>matches(x)).map(x=><ul className="graph-root" key={x.metadata.uid}>{graph(x)}</ul>)}</div></div>}{!busy&&!items.length&&!error&&<div className="empty-state"><strong>No resources found</strong><p>Try selecting another namespace or refreshing your connection.</p></div>}</section><section><h2>Resource details</h2>{selected?<><h3>{selected.metadata.name}</h3><p>{selected.kind} · {selected.metadata.namespace}</p><p><HealthStatus resource={selected}/></p><div className="view-controls">{["Details","Logs","YAML"].map(t=><button key={t} aria-pressed={tab===t} onClick={()=>Tab(t)}>{t}</button>)}</div>{tab==="YAML"?<ObjectDetails key={selected.metadata.uid+"yaml"} context={context} resource={selected} yaml/>:tab==="Logs"?<Logs key={selected.metadata.uid} resource={selected} children={children} context={context}/>:selected.metadata.uid.startsWith("ref:")||selected.kind==="Secret"?<ObjectDetails key={selected.metadata.uid} context={context} resource={selected}/>:<><h4>Labels</h4><pre>{JSON.stringify(selected.metadata.labels||{},null,2)}</pre><h4>Status</h4><pre>{JSON.stringify(selected.status||{},null,2)}</pre></>}</>:<p>Select a resource to inspect it.</p>}</section></div></main></>}
+onLostPointerCapture={stopPan}><div ref={canvasRef} className="graph-canvas" style={{zoom}}>{roots.filter(x=>matches(x)).map(x=><ul className="graph-root" key={x.metadata.uid}>{graph(x)}</ul>)}</div></div>}{!busy&&!items.length&&!error&&<div className="empty-state"><strong>No resources found</strong><p>Try selecting another namespace or refreshing your connection.</p></div>}</section><section><h2>Resource details</h2>{selected?<><h3>{selected.metadata.name}</h3><p>{selected.kind} · {selected.metadata.namespace}</p><p><HealthStatus resource={selected}/></p><div className="view-controls">{["Details",...(metricKinds.has(selected.kind)&&!selected.metadata.uid.startsWith("ref:")?["Metrics"]:[]),"Logs","YAML"].map(t=><button key={t} aria-pressed={tab===t} onClick={()=>Tab(t)}>{t}</button>)}</div>{tab==="Metrics"?<MetricsPanel
+      resource={selected}
+      children={children}
+      metrics={podMetrics}
+      state={currentMetrics}
+    />:tab==="YAML"?<ObjectDetails key={selected.metadata.uid+"yaml"} context={context} resource={selected} yaml/>:tab==="Logs"?<Logs key={selected.metadata.uid} resource={selected} children={children} context={context}/>:selected.metadata.uid.startsWith("ref:")||selected.kind==="Secret"?<ObjectDetails key={selected.metadata.uid} context={context} resource={selected}/>:<><h4>Labels</h4><pre>{JSON.stringify(selected.metadata.labels||{},null,2)}</pre><h4>Status</h4><pre>{JSON.stringify(selected.status||{},null,2)}</pre></>}</>:<p>Select a resource to inspect it.</p>}</section></div></main></>}
 createRoot(document.getElementById('root')).render(<App/>);

@@ -22,6 +22,14 @@ type Owner struct {
 	UID        string `json:"uid"`
 	Controller bool   `json:"controller"`
 }
+type ContainerSpec struct {
+	Name      string `json:"name"`
+	Resources struct {
+		Requests map[string]string `json:"requests,omitempty"`
+		Limits   map[string]string `json:"limits,omitempty"`
+	} `json:"resources"`
+}
+
 type Resource struct {
 	Kind     string `json:"kind"`
 	Metadata struct {
@@ -32,12 +40,9 @@ type Resource struct {
 		OwnerReferences []Owner           `json:"ownerReferences"`
 	} `json:"metadata"`
 	Spec struct {
-		Containers []struct {
-			Name string `json:"name"`
-		} `json:"containers"`
-		InitContainers []struct {
-			Name string `json:"name"`
-		} `json:"initContainers"`
+		Replicas       *int            `json:"replicas,omitempty"`
+		Containers     []ContainerSpec `json:"containers"`
+		InitContainers []ContainerSpec `json:"initContainers"`
 	} `json:"spec"`
 	Status map[string]any `json:"status"`
 }
@@ -128,6 +133,7 @@ func main() {
 	}
 	mux := http.NewServeMux()
 	dependencyRoutes(mux)
+	metricsRoutes(mux)
 	mux.HandleFunc("GET /api/context", func(w http.ResponseWriter, r *http.Request) {
 		b, e := kube(r.Context(), "config", "current-context")
 		reply(w, map[string]string{"context": strings.TrimSpace(string(b))}, e)

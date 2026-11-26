@@ -290,3 +290,123 @@ html[data-theme="light"] .health-unknown   { color: #52525b; }
 .restart-count {
   color: var(--cbbaacb);
 }
+
+/* v0.1.6 — Resource metrics */
+
+.metric-inline {
+  display: block;
+  font-size: 11px;
+  color: var(--cbbaacb);
+  margin-top: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics-panel {
+  min-width: 0;
+}
+
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit,minmax(150px,1fr));
+  gap: 12px;
+}
+
+.metric-card {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--c49365e);
+  border-radius: 8px;
+  background: var(--c30223f);
+}
+
+.metric-label {
+  color: var(--cbbaacb);
+  font-size: 13px;
+}
+
+.metric-value {
+  font-size: 24px;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.metric-utilization {
+  margin-top: 6px;
+}
+
+.metric-utilization-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--cbbaacb);
+}
+
+.metric-track {
+  height: 6px;
+  margin-top: 5px;
+  border-radius: 5px;
+  background: var(--c49365e);
+  overflow: hidden;
+}
+
+.metric-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 5px;
+}
+
+.metric-fill.metric-medium {
+  background: #eab308;
+}
+
+.metric-fill.metric-high {
+  background: #ef4444;
+}
+
+.metrics-notice {
+  padding: 10px 12px;
+  margin-bottom: 12px;
+  border-left: 3px solid var(--cff9a60);
+  background: var(--c30223f);
+  color: var(--cff9a60);
+  border-radius: 5px;
+  font-size: 13px;
+}
+
+.metric-table-wrap {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.metric-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.metric-table th,
+.metric-table td {
+  text-align: left;
+  padding: 10px;
+  border-bottom: 1px solid var(--c49365e);
+  vertical-align: top;
+}
+
+.metric-table th {
+  color: var(--cd9a6ff);
+  background: var(--c30223f);
+}
+
+.metric-table td small {
+  display: block;
+  margin-top: 4px;
+}
+
+.metrics-panel .hint {
+  font-size: 12px;
+  line-height: 1.6;
+}
