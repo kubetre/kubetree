@@ -33,6 +33,14 @@ jobs:
             if [ "$os" = windows ]; then ext=.exe; fi
             CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -o "release/kubetree-$os-$arch$ext" .
           done
+          for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64; do
+            os=${target%/*}; arch=${target#*/}
+            if [ "$os" = windows ]; then
+              zip -j "release/kubetree-$os-$arch.zip" "release/kubetree-$os-$arch.exe" LICENSE
+            else
+              tar -czf "release/kubetree-$os-$arch.tar.gz" -C release "kubetree-$os-$arch" -C .. LICENSE
+            fi
+          done
           cd release && sha256sum kubetree-* > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         with:
