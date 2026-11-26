@@ -3,7 +3,7 @@ kind: Plugin
 metadata:
   name: kubetree
 spec:
-  version: v0.1.6
+  version: v0.1.7
   homepage: https://github.com/kubetre/kubetree
   shortDescription: Visualize Kubernetes resources and dependencies
   description: |
@@ -18,34 +18,34 @@ spec:
       matchLabels:
         os: linux
         arch: amd64
-    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.6/kubetree-linux-amd64.tar.gz
-    sha256: d9f07475caf06789193aa1fec6b0bf196df421143264e50ddade9d0cc926f3dc
+    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.7/kubetree-linux-amd64.tar.gz
+    sha256: fa9341bacb1d285e7f44167883640fcd46b5c6772ad962418e34a5463505a0d2
     bin: kubetree-linux-amd64
   - selector:
       matchLabels:
         os: linux
         arch: arm64
-    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.6/kubetree-linux-arm64.tar.gz
-    sha256: 4ddcef28e45bbe760312bda9b5e66a7040b6284be997dcc85a725c6e11e91cbd
+    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.7/kubetree-linux-arm64.tar.gz
+    sha256: e0d3a651a6cd47ac58be351073c68e533505bd6eb0fcb0a8de24ebf4febdfd4c
     bin: kubetree-linux-arm64
   - selector:
       matchLabels:
         os: darwin
         arch: amd64
-    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.6/kubetree-darwin-amd64.tar.gz
-    sha256: c280e54f3c5f88e229d31e0406cbe6d04080298509f9c9556624e5d06fa353e9
+    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.7/kubetree-darwin-amd64.tar.gz
+    sha256: 8f9a1eb8a6165143619d6f9cdf1701e0f4d15e1b77444882fcc1ead880c6c032
     bin: kubetree-darwin-amd64
   - selector:
       matchLabels:
         os: darwin
         arch: arm64
-    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.6/kubetree-darwin-arm64.tar.gz
-    sha256: db578f18e18e875c324ea4fafc24854482260a88e7596838990391028616e4ec
+    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.7/kubetree-darwin-arm64.tar.gz
+    sha256: 589f446ae92095bc252b9d14d8315c55c0b167e3fb9b60096e4c386d63a86c61
     bin: kubetree-darwin-arm64
   - selector:
       matchLabels:
         os: windows
         arch: amd64
-    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.6/kubetree-windows-amd64.zip
-    sha256: 4d111dcc4f335543b708c4b162d1f0dc80e2a8f9ad2de016d7f20f25b600ec28
+    uri: https://github.com/kubetre/kubetree/releases/download/v0.1.7/kubetree-windows-amd64.zip
+    sha256: e1363e66f028ef4164276e1783087556964f2bec35ac54685376534ed2337bb1
     bin: kubetree-windows-amd64.exe
