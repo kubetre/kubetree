@@ -45,3 +45,16 @@ The header links to kubetre.com in a new tab. Logs are available for Pods and th
 Select a workload in List or Graph view, then click Dependency view. Click a related resource to inspect it; Focus selected resource navigates to its own dependencies. References may be missing or inaccessible. Service matches use selectors, not observed traffic. PDB and NetworkPolicy matchExpressions are not yet supported. Ingress and cert-manager references are forward-only; reverse discovery and EndpointSlice matching are pending.
 
 Secrets are retrieved on selection with existing kubeconfig permissions. Reveal, Decode, Encode, Copy and Download decoded operate locally. YAML is masked until revealed. TLS parsing shows the first PEM certificate, not a full chain validation. Do not share screenshots, clipboard contents or downloaded secrets. Local processes can access the loopback API; do not run on untrusted shared machines. No cluster mutation endpoints are provided. API calls require X-KubeTree-Local: 1. Existing kubectl dependency remains.
+
+
+## Global Search and cluster connections
+
+- Export KUBECONFIG before launching, or select a trusted kubeconfig using the folder icon.
+- Select context and namespace, then click Apply.
+- Global Search discovers Kubernetes resource metadata subject to RBAC.
+- Workload metrics show CPU and memory usage.
+- Nodes provides cluster-wide node information.
+
+![Global Search](images/global-search.png)
+![Metrics](images/metrics.png)
+![Nodes](images/nodes.png)
