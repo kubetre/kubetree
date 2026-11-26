@@ -173,3 +173,120 @@ main {
   margin: 0;
   white-space: nowrap;
 }
+
+/* Active Kubernetes scope */
+.active-scope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.scope-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 14px;
+  background: var(--c201630);
+  border: 1px solid var(--c62467b);
+  border-left: 3px solid var(--c9976bf);
+  border-radius: 8px;
+}
+
+.scope-item span {
+  font-size: 12px;
+  color: var(--cbbaacb);
+}
+
+.scope-item strong {
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.scope-pending {
+  color: var(--cff9a60);
+  font-size: 12px;
+}
+
+.kind-filter {
+  min-height: 38px;
+  max-width: 100%;
+}
+
+.search-row {
+  flex-wrap: wrap;
+}
+
+
+/* Compact active Kubernetes scope */
+.active-scope {
+  gap: 16px;
+  padding: 10px 12px;
+  background: var(--c201630);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.scope-item {
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+
+.scope-item + .scope-item {
+  border-left: 1px solid var(--c62467b);
+  padding-left: 16px;
+}
+
+.scope-item span {
+  font-size: 13px;
+}
+
+@media(max-width: 600px) {
+  .scope-item + .scope-item {
+    border-left: 0;
+    padding-left: 0;
+  }
+}
+
+/* Resource health indicators */
+.health-status {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.health-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+  flex-shrink: 0;
+}
+
+.health-healthy   { color: #4ade80; }
+.health-warning   { color: #fbbf24; }
+.health-unhealthy { color: #f87171; }
+.health-completed { color: #60a5fa; }
+.health-unknown   { color: #a1a1aa; }
+
+html[data-theme="light"] .health-healthy   { color: #15803d; }
+html[data-theme="light"] .health-warning   { color: #92400e; }
+html[data-theme="light"] .health-unhealthy { color: #b91c1c; }
+html[data-theme="light"] .health-completed { color: #1d4ed8; }
+html[data-theme="light"] .health-unknown   { color: #52525b; }
+
+.restart-count {
+  color: var(--cbbaacb);
+}
