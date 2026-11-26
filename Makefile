@@ -9,4 +9,5 @@ build: frontend
 run:
 	./bin/kubetree
 test: frontend
+	cd frontend && npm test
 	go test ./...
