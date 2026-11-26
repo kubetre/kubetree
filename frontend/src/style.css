@@ -480,3 +480,25 @@ html[data-theme="light"] .health-unknown   { color: #52525b; }
 .metric-table td:first-child small {
   white-space: nowrap;
 }
+
+/* Theme-specific brand logos */
+html[data-theme="light"] .brand img {
+    mix-blend-mode: normal;
+    border-radius: 0;
+}
+
+html[data-theme="dark"] .brand img {
+    mix-blend-mode: lighten;
+    border-radius: 0;
+}
+
+/* Theme-specific brand logos */
+html[data-theme="light"] .brand img {
+    mix-blend-mode: normal;
+    border-radius: 0;
+}
+
+html[data-theme="dark"] .brand img {
+    mix-blend-mode: lighten;
+    border-radius: 0;
+}
