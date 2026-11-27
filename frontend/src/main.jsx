@@ -1,3 +1,4 @@
+import {IssuesPanel} from "./issues.jsx";
 import {SearchPanel} from "./search.jsx";
 import {NodesPanel} from "./nodes.jsx";
 import {MetricsPanel,MetricSummary} from "./metrics.jsx";
@@ -54,16 +55,20 @@ const [lastRefresh,setLastRefresh]=useState(null);
 const [metricInterval,setMetricInterval]=useState(0);
 const [clusterView,setClusterView]=useState("workloads");
 const [nodeRefresh,setNodeRefresh]=useState(0);
+const [issueRefresh,setIssueRefresh]=useState(0);
 const [connectionVersion,setConnectionVersion]=useState(0);
 const inventoryRequest=useRef(null);
+const pendingInventory=useRef(null);
+const switching=useRef(false);
 const [prepared,setPrepared]=useState(null),[namespaceWarning,setNamespaceWarning]=useState("");
 const [searchRefresh,setSearchRefresh]=useState(0);
+const [searchVisited,setSearchVisited]=useState(false);
 const [metricState,setMetricState]=useState({
   available:false,items:[],loading:false,message:""
 });
 
 useEffect(()=>{
-  if(!context||!lastRefresh||busy||clusterView!=="workloads")return;
+  if(!context||!lastRefresh||busy||! ["workloads","issues"].includes(clusterView))return;
 
   let active=true;
   let timer;
@@ -93,7 +98,7 @@ useEffect(()=>{
         updatedAt:data.available?new Date():null
       });
 
-      if(active&&metricInterval>0){
+      if(active&&metricInterval>0&&clusterView==="workloads"){
         if(data.available){
           timer=setTimeout(readMetrics,metricInterval*1000);
         }else if(data.retryable){
@@ -112,7 +117,7 @@ useEffect(()=>{
         retryable:true
       });
 
-      if(active&&metricInterval>0){
+      if(active&&metricInterval>0&&clusterView==="workloads"){
         timer=setTimeout(
           readMetrics,
           Math.max(metricInterval,30)*1000
@@ -218,52 +223,58 @@ requestAnimationFrame(()=>{
   el.scrollTop=0;
 })};resize();const observer=new ResizeObserver(resize);observer.observe(el);for(const child of canvas.children)observer.observe(child);return()=>observer.disconnect()},[view,fit,fitMode,busy,items,search,kindFilter,collapsed,expanded,clusterView]);function select(x){D(x);Tab('Details');if(view!=='dep')A(x)}
 async function browse(path="",mode=browseMode){setBrowseMode(mode);setBrowseBusy(true);setBrowseError("");setBrowser({path,entries:[]});try{setBrowser(await api("local-files",{path}))}catch(e){setBrowseError(e.message)}finally{setBrowseBusy(false)}}
-async function chooseSource(path){setBrowser(null);await discover(path,true)}
-function activate(data,sourceValue,namespace){
+async function chooseSource(path){setBrowser(null);await discover(path)}
+function activate(data,sourceValue,namespace,inventory){
+  pendingInventory.current={context:data.context,namespace,inventory};
   inventoryRequest.current?.abort();
   I([]);D(null);A(null);W([]);B(false);setLastRefresh(null);expand(false);
   Q("");setKindFilter("All");F({});Tab("Details");
   setContextName(data.name);setActiveSource(sourceValue);
   N(namespace);T(namespace);C(data.context);setConnectionVersion(v=>v+1);
 }
-async function prepare(name,sourceValue,auto=false){
-  setChoice(name);setPrepared(null);S([]);T("");setNamespaceWarning("");
-  if(!name)return;
+async function prepare(name,sourceValue){
+  if(!name)throw Error('No context found in kubeconfig.');
   const r=await fetch('/api/connections?'+new URLSearchParams({source:sourceValue,name}),{method:'POST',headers:{'X-KubeTree-Local':'1'}});
   const data=await r.json();if(!r.ok)throw Error(data.error||'Connection failed');
   const namespace=data.namespace||'default';
-  T(namespace);
-  try{S(await api('namespaces',{context:data.context}))}catch(e){setNamespaceWarning('Namespace discovery failed; enter namespace manually: '+e.message)}
+  let available=[],warning="";
+  try{available=await api('namespaces',{context:data.context})}catch(e){warning='Namespace discovery failed; enter namespace manually: '+e.message}
+  const inventory=await api('resources',{context:data.context,namespace});
+  S(available);setNamespaceWarning(warning);setChoice(name);
   setPrepared({data,source:sourceValue,name});
-  if(auto)activate(data,sourceValue,namespace);
+  activate(data,sourceValue,namespace,inventory);
 }
-async function discover(sourceValue=source,auto=false){
-  setConnecting(true);E('');setPrepared(null);setContexts([]);setChoice('');S([]);T('');setNamespaceWarning('');
-  try{
+async function switchConnection(action){
+  if(switching.current)return;
+  switching.current=true;setConnecting(true);E('');
+  try{await action()}catch(e){E(e.message)}finally{switching.current=false;setConnecting(false)}
+}
+async function discover(sourceValue=source){
+  await switchConnection(async()=>{
     const data=await api('connections',{source:sourceValue});
+    await prepare(data.current||data.contexts[0]||'',sourceValue);
     setSource(sourceValue);setSourceLabel(sourceValue||data.exported||"");setContexts(data.contexts);
-    const name=data.current||data.contexts[0]||'';
-    await prepare(name,sourceValue,auto&&!!name);
-  }catch(e){E(e.message)}finally{setConnecting(false)}
+  });
 }
 async function chooseContext(name){
-  setConnecting(true);E('');
-  try{await prepare(name,source)}catch(e){E(e.message)}finally{setConnecting(false)}
+  if(!name||name===contextName)return;
+  await switchConnection(()=>prepare(name,source));
 }
-async function applyConnection(){
-  if(!prepared||connecting||prepared.name!==choice||prepared.source!==source)return;
-  const namespace=draft.trim();
+async function chooseNamespace(value){
+  const namespace=value.trim();
+  if(!prepared||namespace===ns)return;
   if(namespace!=="*"&&(!/^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/.test(namespace)||namespace.length>63)){E('Enter a valid namespace name.');return;}
-  setConnecting(true);E('');
-  try{
-    // Re-resolve the selected configuration when Apply is pressed.
-    const r=await fetch('/api/connections?'+new URLSearchParams({source,name:choice}),{method:'POST',headers:{'X-KubeTree-Local':'1'}});
-    const data=await r.json();if(!r.ok)throw Error(data.error||'Connection failed');
-    setPrepared({data,source,name:choice});activate(data,source,namespace);
-  }catch(e){E(e.message)}finally{setConnecting(false)}
+  await switchConnection(async()=>{
+    const inventory=await api('resources',{context:prepared.data.context,namespace});
+    activate(prepared.data,source,namespace,inventory);
+  });
 }
-useEffect(()=>{discover("",true)},[]);useEffect(()=>{
-  if(context)load();
+useEffect(()=>{discover("")},[]);useEffect(()=>{
+  const pending=pendingInventory.current;
+  pendingInventory.current=null;
+  if(pending&&pending.context===context&&pending.namespace===ns){
+    I(pending.inventory.items);W(pending.inventory.warnings);setLastRefresh(new Date());B(false);
+  }else if(context)load();
   return()=>inventoryRequest.current?.abort();
 },[context,ns,connectionVersion]);useEffect(()=>{try{localStorage.setItem("kubetree-namespace",ns)}catch{}},[ns]);
 async function load(){
@@ -302,7 +313,7 @@ async function load(){
 }
 
 
-function openSearchResource(item, mode="list"){
+function openSearchResource(item, mode="list", detailTab="Details"){
   const resource=items.find(x=>
     x.metadata.uid===item.uid &&
     x.kind===item.kind &&
@@ -319,7 +330,7 @@ function openSearchResource(item, mode="list"){
   V(mode);
   D(resource);
   A(resource);
-  Tab("Details");
+  Tab(detailTab);
   setClusterView("workloads");
 
   return true;
@@ -359,7 +370,10 @@ useEffect(()=>{
 },[expanded,clusterView]);
 
 function refreshCurrentView(){
-  if(clusterView==="search"){
+  if(clusterView==="issues"){
+    setIssueRefresh(v=>v+1);
+    load();
+  }else if(clusterView==="search"){
     setSearchRefresh(v=>v+1);
   }else if(clusterView==="nodes"){
     setNodeRefresh(v=>v+1);
@@ -383,7 +397,7 @@ function graph(x,seen=new Set()){const id=x.metadata.uid;if(seen.has(id)||!match
 return <><header><a className="brand" href="https://kubetre.com" target="_blank" rel="noopener noreferrer"><img src={theme === 'light' ? brandLogoLight : brandLogoDark} alt="KubeTre"/><span className="product-name">KubeTree</span></a><div className="header-actions"><span className="pill">READ ONLY · LOCAL</span><button type="button" className="theme-toggle" aria-label={theme==='light'?'Switch to dark theme':'Switch to light theme'} onClick={()=>setTheme(t=>t==='light'?'dark':'light')}>{theme==='light'?'☾ Dark':'☀ Light'}</button></div></header><main><div className="connection-overview">{context&&<div className="active-scope">
 <div className="scope-item"><span>Active context</span><strong>{contextName}</strong></div>
 <div className="scope-item"><span>Active namespace</span><strong>{ns==="*"?"All namespaces":ns}</strong></div>
-{(source!==activeSource||choice!==contextName||draft!==ns)&&<span className="scope-pending">Connection changes not applied</span>}
+{connecting&&<span className="scope-pending" role="status">Switching connection…</span>}
 </div>}</div>{error&&<p role="alert" className="error">{error}</p>}<section className="toolbar scope-toolbar">
 <button
   disabled={connecting||browseBusy}
@@ -414,9 +428,9 @@ aria-expanded={!!browser}
         const value=window.prompt(
           "Enter namespace name",draft==="*"?"":draft
         );
-        if(value&&value.trim())T(value.trim());
+        if(value&&value.trim())chooseNamespace(value);
       }else{
-        T(e.target.value);
+        chooseNamespace(e.target.value);
       }
     }}
   >
@@ -432,7 +446,7 @@ aria-expanded={!!browser}
     <option value="__manual__">Enter namespace manually...</option>
   </select>
 </label>
-<div className="toolbar-actions"><button disabled={connecting||!prepared||!draft} onClick={applyConnection}>Apply</button><button disabled={busy||connecting||!context} onClick={refreshCurrentView}>Refresh</button></div>
+<div className="toolbar-actions"><button disabled={busy||connecting||!context} onClick={refreshCurrentView}>Refresh</button></div>
 <label className="metrics-refresh-control">
   Metrics refresh
   <select
@@ -463,7 +477,7 @@ aria-expanded={!!browser}
 }
 {browser.entries.map(e=><button key={e.path} disabled={browseBusy} onClick={()=>e.directory?browse(e.path):chooseSource(e.path)}>{e.directory?"📁":"📄"} {e.name}</button>)}</div><small>Only select trusted kubeconfig sources.</small></section>}
 {namespaceWarning&&<p role="status">{namespaceWarning}</p>}
-{!context?<p>{connecting?"Discovering connection…":"Select a trusted kubeconfig source, context and namespace, then Apply."}</p>:<>
+{!context?<p>{connecting?"Discovering connection…":"Select a trusted kubeconfig source, context and namespace."}</p>:<>
 
 <div className="view-controls cluster-navigation">
   <button
@@ -480,12 +494,21 @@ aria-expanded={!!browser}
           <button
             disabled={!context||busy}
             aria-pressed={clusterView==="search"}
-            onClick={()=>{expand(false);setClusterView("search")}}
+            onClick={()=>{expand(false);setSearchVisited(true);setClusterView("search")}}
           >Global Search</button>
 
+<button aria-pressed={clusterView==="issues"} onClick={()=>{expand(false);setClusterView("issues")}}>Issues</button>
 </div>
 
-{clusterView==="nodes"
+{searchVisited&&context&&<div hidden={clusterView!=="search"}><SearchPanel
+        key={context+":"+connectionVersion+":"+ns+":"+searchRefresh}
+        active={clusterView==="search"}
+        context={context}
+        namespace={ns}
+        onOpenResource={openSearchResource}
+        inventory={items}
+      /></div>}
+{clusterView==="issues" ? <IssuesPanel key={context+":"+ns+":"+issueRefresh} context={context} namespace={ns} inventory={items} busy={busy} metrics={podMetrics} metricState={currentMetrics} onOpenResource={openSearchResource}/> : clusterView==="nodes"
   ? <NodesPanel
       contextName={contextName}
       key={context+":"+connectionVersion}
@@ -494,14 +517,7 @@ aria-expanded={!!browser}
       refresh={nodeRefresh}
     />
   
-  : clusterView==="search"
-    ? <SearchPanel
-        key={context+":"+connectionVersion+":"+ns+":"+searchRefresh}
-        context={context}
-        namespace={ns}
-        onOpenResource={openSearchResource}
-        inventory={items}
-      />
+  : clusterView==="search" ? null
   : <><div className="search-row">
 <div className="search-box">
 <span className="search-icon" aria-hidden="true">⌕</span>

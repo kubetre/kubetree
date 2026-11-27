@@ -29,10 +29,27 @@ var connections = struct {
 func sourcePaths(source string) ([]string, error) {
 	if source == "" {
 		source = os.Getenv("KUBECONFIG")
-		if source == "" {
+		if source != "" {
+			return filepath.SplitList(source), nil
+		}
+
+		home, err := os.UserHomeDir()
+		if err != nil {
+			return nil, err
+		}
+
+		path := filepath.Join(home, ".kube", "config")
+		info, err := os.Stat(path)
+		if os.IsNotExist(err) {
 			return nil, nil
 		}
-		return filepath.SplitList(source), nil
+		if err != nil {
+			return nil, err
+		}
+		if !info.Mode().IsRegular() {
+			return nil, fmt.Errorf("Default kubeconfig is not a regular file")
+		}
+		return []string{path}, nil
 	}
 	if !filepath.IsAbs(source) {
 		return nil, fmt.Errorf("Enter an absolute local path")

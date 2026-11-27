@@ -12,19 +12,44 @@ async function searchAPI(path, params, signal) {
   );
 
   if (!response.ok) {
-    throw new Error(await response.text());
+    const body = await response.text();
+    let message = body;
+    try { message = JSON.parse(body).error || body; } catch {}
+    throw new Error(message);
   }
 
   return response.json();
 }
 
 
+function GenericDetails({context, resource, yaml}) {
+  const [state, setState] = useState({loading:true});
+  useEffect(() => {
+    const controller = new AbortController();
+    setState({loading:true});
+    searchAPI("search/object", {
+      context, resource:resource.resource, apiVersion:resource.apiVersion,
+      namespace:resource.namespace || "", name:resource.name,
+      uid:resource.uid || "", format:yaml ? "yaml" : "json"
+    }, controller.signal).then(data => {
+      if (!controller.signal.aborted) setState({data});
+    }).catch(e => {
+      if (!controller.signal.aborted) setState({error:e.message});
+    });
+    return () => controller.abort();
+  }, [context, resource, yaml]);
+  if (state.loading) return <p role="status">Loading resource…</p>;
+  if (state.error) return <p className="error" role="alert">{state.error}</p>;
+  return <pre>{yaml ? state.data.yaml : JSON.stringify(state.data.object,null,2)}</pre>;
+}
+
 export function SearchPanel({
   context,
   namespace,
   onSelect,
   onOpenResource,
-  inventory=[]
+  inventory=[],
+  active=true
 }) {
   const [query, setQuery] = useState("");
   const [kind, setKind] = useState("");
@@ -36,8 +61,42 @@ export function SearchPanel({
   const [inspected, setInspected] = useState(null);
   const [tab, setTab] = useState("Details");
   const request = useRef(null);
+  const timer = useRef(null);
+  const inspector = useRef(null);
+  const [waiting, setWaiting] = useState(false);
+
+  function cancelSearch() {
+    clearTimeout(timer.current);
+    timer.current = null;
+    request.current?.abort();
+    request.current = null;
+    setWaiting(false);
+    setBusy(false);
+  }
+
+  function changeSearch(nextQuery, nextKind) {
+    cancelSearch();
+    setQuery(nextQuery);
+    setKind(nextKind);
+    setResult(null);
+    setError("");
+    setSelected(null);
+    setInspected(null);
+    if (nextQuery.trim().length < 2 && (nextQuery.trim() || !nextKind)) return;
+    setWaiting(true);
+    timer.current = setTimeout(() => {
+      timer.current = null;
+      setWaiting(false);
+      search(null, nextQuery, nextKind);
+    }, 1000);
+  }
 
   useEffect(() => {
+    if (inspected) inspector.current?.scrollIntoView({block:"start", behavior:"auto"});
+  }, [inspected]);
+
+  useEffect(() => {
+    if(!active){cancelSearch();setInspected(null);setSelected(null);return;}
     const controller = new AbortController();
 
     searchAPI("search/types", {context}, controller.signal)
@@ -48,16 +107,25 @@ export function SearchPanel({
 
     return () => {
       controller.abort();
+      clearTimeout(timer.current);
       request.current?.abort();
+      request.current = null;
     };
-  }, [context, namespace]);
+  }, [context, namespace, active]);
 
-  async function search(event) {
-    event.preventDefault();
+  useEffect(() => {
+    if (!inspected) return;
+    function escape(e) {
+      if (e.key === "Escape") { setInspected(null); setSelected(null); }
+    }
+    window.addEventListener("keydown", escape);
+    return () => window.removeEventListener("keydown", escape);
+  }, [inspected]);
 
-    if (!query.trim() && !kind) return;
-
-    request.current?.abort();
+  async function search(event, text=query, resourceKind=kind) {
+    event?.preventDefault();
+    if (text.trim().length < 2 && (text.trim() || !resourceKind)) return;
+    cancelSearch();
 
     const controller = new AbortController();
     request.current = controller;
@@ -72,13 +140,13 @@ export function SearchPanel({
       const data = await searchAPI("search", {
         context,
         namespace,
-        q: query.trim(),
-        kind
+        q: text.trim(),
+        kind: resourceKind
       }, controller.signal);
 
       if (!controller.signal.aborted) setResult(data);
     } catch (e) {
-      if (e.name !== "AbortError") setError(e.message);
+      if (!controller.signal.aborted && request.current === controller) setError(e.message);
     } finally {
       if (request.current === controller) setBusy(false);
     }
@@ -91,10 +159,10 @@ export function SearchPanel({
         placeholder="Search any Kubernetes resource..."
         value={query}
         maxLength={256}
-        onChange={e => setQuery(e.target.value)}
+        onChange={e => changeSearch(e.target.value, kind)}
       />
 
-      <select value={kind} onChange={e => setKind(e.target.value)}>
+      <select value={kind} onChange={e => changeSearch(query, e.target.value)}>
         <option value="">All resource kinds</option>
         {types.map(t =>
           <option
@@ -106,25 +174,13 @@ export function SearchPanel({
         )}
       </select>
 
-      <button
-        type="submit"
-        disabled={busy || (!query.trim() && !kind)}
-      >
-        Search
-      </button>
-
-      <button
-        type="button"
-        disabled={!busy}
-        onClick={() => request.current?.abort()}
-      >
-        Cancel
-      </button>
+      <button type="submit" hidden aria-hidden="true" tabIndex={-1}>Search</button>
+      {(busy || waiting) && <button type="button" onClick={cancelSearch}>Cancel</button>}
 
       <button
         type="button"
         onClick={()=>{
-          request.current?.abort();
+          cancelSearch();
           setQuery("");
           setKind("");
           setResult(null);
@@ -143,17 +199,19 @@ export function SearchPanel({
       {" · "}Includes cluster-scoped resources
     </p>
 
-    {busy && <p>Searching Kubernetes resources...</p>}
+    {waiting && <p role="status">Waiting for typing to finish…</p>}
+    {busy && <p role="status">Searching Kubernetes resources...</p>}
+    {!busy && !waiting && query.trim().length === 1 && <p>Type at least two characters to search.</p>}
     {error && <p role="alert">{error}</p>}
 
 
-    {inspected && <div className="search-inspector">
+    {inspected && <div className="search-inspector" ref={inspector}>
       <div className="search-inspector-header">
         <h3>{inspected.kind}: {inspected.name}</h3>
-        <button onClick={() => {
+        <button type="button" aria-label="Close inspector" title="Close inspector" onClick={() => {
           setInspected(null);
           setSelected(null);
-        }}>Close</button>
+        }}>×</button>
       </div>
 
       <p className="global-search-summary">
@@ -226,7 +284,7 @@ export function SearchPanel({
             }}
             yaml={tab === "YAML"}
           />
-        : <p>Generic resource inspection is not yet connected.</p>
+        : <GenericDetails key={selected+":"+tab} context={context} resource={inspected} yaml={tab === "YAML"}/>
       }
     </div>}
 

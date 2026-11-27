@@ -30,7 +30,7 @@ function Utilization({label, usage, target}) {
       <div className="metric-track">
         <div
           className={"metric-fill " +
-            (percent >= 100 ? "metric-high" :
+            (percent >= (label==="% of limit"?90:100) ? "metric-high" :
              percent >= 80 ? "metric-medium" : "")}
           style={{width: `${Math.min(percent, 100)}%`}}
         />

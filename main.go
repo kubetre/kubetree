@@ -135,6 +135,7 @@ func main() {
 	connectionRoutes(mux)
 	dependencyRoutes(mux)
 	searchRoutes(mux)
+	issueRoutes(mux)
 	metricsRoutes(mux)
 	mux.HandleFunc("GET /api/context", func(w http.ResponseWriter, r *http.Request) {
 		b, e := kube(r.Context(), "config", "current-context")
