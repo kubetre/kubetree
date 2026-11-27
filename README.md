@@ -131,3 +131,21 @@ Please do not include credentials or confidential cluster data in public issues.
 ![Global Search](docs/images/global-search.png)
 ![Metrics](docs/images/metrics.png)
 ![Nodes](docs/images/nodes.png)
+
+## Latest release
+
+KubeTree v0.1.8 focuses on troubleshooting and automatic Kubernetes
+context and namespace switching.
+
+Highlights:
+- Automatic context switching.
+- Automatic namespace switching.
+- Improved issue overview and issue details.
+- CPU and memory troubleshooting visibility.
+- Manual container log scanning.
+
+Downloads:
+https://github.com/kubetre/kubetree/releases/tag/v0.1.8
+
+Release notes:
+[ KubeTree v0.1.8 ](docs/releases/v0.1.8.md)

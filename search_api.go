@@ -153,6 +153,7 @@ func globalSearch(
 }
 
 func searchRoutes(mux *http.ServeMux) {
+	mux.HandleFunc("GET /api/search/object", inspectSearchObject)
 	mux.HandleFunc("GET /api/search/types", func(
 		w http.ResponseWriter, r *http.Request,
 	) {
