@@ -149,3 +149,26 @@ https://github.com/kubetre/kubetree/releases/tag/v0.1.8
 
 Release notes:
 [ KubeTree v0.1.8 ](docs/releases/v0.1.8.md)
+
+## KubeTree v0.1.8 screenshots
+
+### Automatic context switching
+![Automatic context switching](docs/images/context-switching.png)
+
+### Automatic namespace switching
+![Automatic namespace switching](docs/images/namespace-switching.png)
+
+### Issues overview
+![Issues overview](docs/images/issues-overview.png)
+
+### Expanded issue details
+![Expanded issue details](docs/images/issues-expanded.png)
+
+### CPU and memory alerts
+![CPU and memory alerts](docs/images/cpu-memory-alerts.png)
+
+### Manual log scanning
+![Log scanning](docs/images/log-scanning.png)
+
+### Workloads overview
+![Workloads overview](docs/images/workloads-overview.png)
